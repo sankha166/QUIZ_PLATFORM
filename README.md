@@ -47,14 +47,31 @@ npm run dev       # Starts on http://localhost:5173
 
 ## Environment Variables (backend/.env)
 
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Server port (default: 5000) |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret key for JWT signing (use a long random string) |
-| `JWT_EXPIRES_IN` | Token expiry (default: 7d) |
-| `FRONTEND_URL` | Frontend URL for CORS (default: http://localhost:5173) |
-| `NODE_ENV` | development / production |
+Copy `backend/.env.example` to `backend/.env` and replace placeholders with your own values.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `PORT` | Backend server port | `5000` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:password@localhost:5432/quiz_platform` |
+| `JWT_SECRET` | Secret key for JWT signing (use a long, random string) | `a_very_long_random_secret_string` |
+| `JWT_EXPIRES_IN` | Token expiry duration | `7d` |
+| `FRONTEND_URL` | Frontend origin for CORS | `http://localhost:5173` |
+| `NODE_ENV` | `development` or `production` | `development` |
+| `EMAIL_HOST` | SMTP server host for email sending | `smtp.example.com` |
+| `EMAIL_PORT` | SMTP server port | `587` |
+| `EMAIL_USER` | SMTP username | `user@example.com` |
+| `EMAIL_PASS` | SMTP password | `supersecretpassword` |
+| `EMAIL_FROM` | Sender address used in emails | `noreply@quizplatform.com` |
+
+### Why this matters
+- `DATABASE_URL` is required for PostgreSQL access.
+- `JWT_SECRET` protects your login tokens and must be kept private.
+- `FRONTEND_URL` allows the backend to accept requests from your deployed frontend.
+- Email values are required only if you want password reset or email-based notifications.
+
+### Deployment notes
+- On deployment platforms, add these as environment variables in your service settings.
+- Do not commit `backend/.env` to Git. Use `.env.example` as the template instead.
 
 ---
 

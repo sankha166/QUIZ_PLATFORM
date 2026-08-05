@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { useAuth } from './hooks/useAuth';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
@@ -31,6 +32,8 @@ import QuizAttempt from './pages/student/QuizAttempt';
 import QuizResult from './pages/student/QuizResult';
 import AttemptHistory from './pages/student/AttemptHistory';
 import Leaderboard from './pages/student/Leaderboard';
+import Profile from './pages/student/Profile';
+import Home from './pages/Home';
 
 function RootRedirect() {
   const { isAuthenticated, isAdmin, loading } = useAuth();
@@ -42,14 +45,15 @@ function RootRedirect() {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<RootRedirect />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/home" element={<Home />} />
 
       {/* Public auth routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/redirect" element={<RootRedirect />} />
 
       {/* Admin routes */}
       <Route element={<AdminRoute />}>
@@ -75,6 +79,7 @@ function AppRoutes() {
         <Route path="/student/results/:attemptId" element={<QuizResult />} />
         <Route path="/student/attempts" element={<AttemptHistory />} />
         <Route path="/student/leaderboard" element={<Leaderboard />} />
+        <Route path="/student/profile" element={<Profile />} />
       </Route>
 
       {/* 404 fallback */}
@@ -86,7 +91,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <NotificationProvider>
+        <AppRoutes />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

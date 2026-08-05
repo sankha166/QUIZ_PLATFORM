@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import NotificationBell from '../common/NotificationBell';
 
 const navItems = [
   { path: '/student/dashboard', label: 'Dashboard' },
@@ -26,7 +27,7 @@ export default function StudentLayout({ children }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-8">
-              <Link to="/student/dashboard" className="font-bold text-indigo-600 text-lg">
+              <Link to="/" className="font-bold text-indigo-600 text-lg">
                 🎯 QuizPlatform
               </Link>
               <div className="hidden md:flex items-center gap-1">
@@ -46,20 +47,32 @@ export default function StudentLayout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <NotificationBell />
               <span className="hidden sm:block text-sm text-gray-600">{user?.name}</span>
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
-                  className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-medium"
+                  className="w-10 h-10 rounded-full overflow-hidden bg-indigo-600 text-white flex items-center justify-center text-sm font-medium"
                 >
-                  {user?.name?.charAt(0)}
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt={user?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)
+                  )}
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
                       <p className="text-xs text-gray-500">{user?.email}</p>
                     </div>
+                    <Link
+                      to="/student/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"

@@ -8,7 +8,6 @@ import { formatTime, formatDate, statusColor } from '../../utils/helpers';
 
 export default function QuizResult() {
   const { attemptId } = useParams();
-  const location = useLocation();
   const [attempt, setAttempt] = useState(null);
   const [loading, setLoading] = useState(true);
 
