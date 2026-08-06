@@ -3,7 +3,8 @@ const quizService = require('../services/quiz.service');
 const getAll = async (req, res, next) => {
   try {
     const { search, category, difficulty, sort, status } = req.query;
-    const data = await quizService.getAll({ role: req.user.role, search, category, difficulty, sort, status });
+    const role = req.user?.role || 'GUEST';
+    const data = await quizService.getAll({ role, search, category, difficulty, sort, status });
     res.json({ success: true, quizzes: data });
   } catch (err) { next(err); }
 };

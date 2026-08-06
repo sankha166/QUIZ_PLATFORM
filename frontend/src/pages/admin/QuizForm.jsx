@@ -19,18 +19,17 @@ export default function QuizForm() {
   });
 
   useEffect(() => {
-    getCategories().then((r) => setCategories(r.data.categories));
+    getCategories().then((r) => setCategories(r.data.categories || [])).catch(console.error);
     if (isEdit) {
       getQuizById(id)
         .then((r) => {
           const quiz = r.data.quiz;
-          // Convert category_id to string for select element compatibility
           reset({ ...quiz, category_id: quiz.category_id ? String(quiz.category_id) : '' });
         })
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [id]);
+  }, [id, isEdit, reset]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -45,28 +44,32 @@ export default function QuizForm() {
 
   return (
     <AdminLayout>
-      <div className="max-w-2xl">
-        <div className="flex items-center gap-4 mb-6">
-          <Link to="/admin/quizzes" className="text-gray-500 hover:text-gray-700 text-sm">← Back</Link>
-          <h2 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit Quiz' : 'Create Quiz'}</h2>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Link to="/admin/quizzes" className="text-sm text-slate-500 hover:text-slate-700">← Back</Link>
+            <h2 className="mt-2 text-3xl font-bold text-slate-900">{isEdit ? 'Edit Quiz' : 'Create Quiz'}</h2>
+            <p className="text-sm text-slate-500 mt-1">Set up quiz details, difficulty, and scoring rules.</p>
+          </div>
+          <span className="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-slate-700">{isEdit ? 'Editing quiz' : 'New quiz'}</span>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4">{error}</div>}
+        {error && <div className="rounded-3xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        <div className="card">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="card p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label className="label">Title *</label>
-              <input className="input" placeholder="e.g. JavaScript Fundamentals" {...register('title', { required: 'Title is required' })} />
-              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
+              <input className="input" placeholder="JavaScript Fundamentals" {...register('title', { required: 'Title is required' })} />
+              {errors.title && <p className="text-rose-500 text-xs mt-1">{errors.title.message}</p>}
             </div>
 
             <div>
               <label className="label">Description</label>
-              <textarea className="input" rows={3} placeholder="Brief quiz description…" {...register('description')} />
+              <textarea className="input" rows={4} placeholder="Short quiz description…" {...register('description')} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="label">Category</label>
                 <select className="input" {...register('category_id')}>
@@ -84,32 +87,34 @@ export default function QuizForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <label className="label">Duration (min) *</label>
-                <input type="number" min={1} className="input" {...register('duration', { required: 'Required', min: { value: 1, message: 'Min 1' }, valueAsNumber: true })} />
-                {errors.duration && <p className="text-red-500 text-xs mt-1">{errors.duration.message}</p>}
+                <input type="number" min={1} className="input" {...register('duration', { required: 'Duration is required', min: { value: 1, message: 'Min 1 minute' }, valueAsNumber: true })} />
+                {errors.duration && <p className="text-rose-500 text-xs mt-1">{errors.duration.message}</p>}
               </div>
               <div>
                 <label className="label">Passing Score (%) *</label>
-                <input type="number" min={1} max={100} className="input" {...register('passing_score', { required: true, min: 1, max: 100, valueAsNumber: true })} />
+                <input type="number" min={1} max={100} className="input" {...register('passing_score', { required: 'Passing score is required', min: { value: 1, message: 'Min 1%' }, max: { value: 100, message: 'Max 100%' }, valueAsNumber: true })} />
+                {errors.passing_score && <p className="text-rose-500 text-xs mt-1">{errors.passing_score.message}</p>}
               </div>
               <div>
                 <label className="label">Max Attempts</label>
-                <input type="number" min={1} className="input" {...register('max_attempts', { min: 1, valueAsNumber: true })} />
+                <input type="number" min={1} className="input" {...register('max_attempts', { min: { value: 1, message: 'Min 1 attempt' }, valueAsNumber: true })} />
+                {errors.max_attempts && <p className="text-rose-500 text-xs mt-1">{errors.max_attempts.message}</p>}
               </div>
             </div>
 
             <div>
-              <label className="label">Thumbnail URL (optional)</label>
-              <input className="input" type="url" placeholder="https://…" {...register('thumbnail_url')} />
+              <label className="label">Thumbnail URL</label>
+              <input className="input" type="url" placeholder="https://example.com/image.jpg" {...register('thumbnail_url')} />
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={isSubmitting} className="btn-primary px-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Link to="/admin/quizzes" className="btn-secondary w-full sm:w-auto">Cancel</Link>
+              <button type="submit" disabled={isSubmitting} className="btn-primary w-full sm:w-auto px-8">
                 {isSubmitting ? 'Saving…' : isEdit ? 'Update Quiz' : 'Create Quiz'}
               </button>
-              <Link to="/admin/quizzes" className="btn-secondary px-8">Cancel</Link>
             </div>
           </form>
         </div>

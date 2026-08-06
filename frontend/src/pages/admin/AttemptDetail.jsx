@@ -12,7 +12,10 @@ export default function AttemptDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAdminAttemptById(id).then((r) => setAttempt(r.data.attempt)).catch(console.error).finally(() => setLoading(false));
+    getAdminAttemptById(id)
+      .then((r) => setAttempt(r.data.attempt))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <AdminLayout><LoadingSpinner size="lg" className="py-20" /></AdminLayout>;
@@ -20,38 +23,107 @@ export default function AttemptDetail() {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/admin/attempts" className="text-gray-500 hover:text-gray-700 text-sm">← Back</Link>
-          <h2 className="text-xl font-bold text-gray-900">Attempt Detail</h2>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Link to="/admin/attempts" className="text-sm text-slate-500 hover:text-slate-700">← Back to attempts</Link>
+            <h2 className="mt-3 text-3xl font-bold text-slate-900">Attempt detail</h2>
+            <p className="text-sm text-slate-500 mt-1">A complete breakdown of this student's quiz attempt.</p>
+          </div>
+          <div className="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-slate-700">{attempt.quiz_title}</div>
         </div>
 
-        <div className="card">
-          <div className="flex flex-wrap gap-6">
-            <div><p className="text-sm text-gray-500">Student</p><p className="font-semibold">{attempt.student_name}</p></div>
-            <div><p className="text-sm text-gray-500">Quiz</p><p className="font-semibold">{attempt.quiz_title}</p></div>
-            <div><p className="text-sm text-gray-500">Score</p><p className="font-semibold">{formatPercent(attempt.percentage)}</p></div>
-            <div><p className="text-sm text-gray-500">Status</p><Badge className={statusColor(attempt.status)}>{attempt.status}</Badge></div>
-            <div><p className="text-sm text-gray-500">Time</p><p className="font-semibold">{formatTime(attempt.time_taken)}</p></div>
-            <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(attempt.completed_at)}</p></div>
-          </div>
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
-            <div className="text-center"><p className="text-xl font-bold text-green-600">{attempt.correct_answers}</p><p className="text-xs text-gray-500">Correct</p></div>
-            <div className="text-center"><p className="text-xl font-bold text-red-600">{attempt.incorrect_answers}</p><p className="text-xs text-gray-500">Incorrect</p></div>
-            <div className="text-center"><p className="text-xl font-bold text-gray-500">{attempt.unanswered}</p><p className="text-xs text-gray-500">Unanswered</p></div>
-          </div>
-        </div>
-
-        <div className="card space-y-4">
-          <h3 className="font-semibold text-gray-800">Answer Review</h3>
-          {attempt.answers?.map((a, i) => (
-            <div key={a.id} className={`border rounded-lg p-4 ${a.is_correct ? 'border-green-200 bg-green-50' : a.selected_option_id ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
-              <p className="font-medium text-gray-900 text-sm mb-2"><span className="text-gray-400 mr-1">Q{i + 1}.</span>{a.question_text}</p>
-              <div className="text-sm space-y-1">
-                <p><span className="text-gray-500">Selected:</span> <span className={a.is_correct ? 'text-green-700 font-medium' : 'text-red-700'}>{a.selected_option_text || 'Not answered'}</span></p>
-                {!a.is_correct && <p><span className="text-gray-500">Correct:</span> <span className="text-green-700 font-medium">{a.correct_option_text}</span></p>}
-                {a.explanation && <p className="text-blue-600 text-xs mt-1">💡 {a.explanation}</p>}
+        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+              <div className="min-w-[140px]">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Student</p>
+                <p className="font-semibold text-slate-900">{attempt.student_name}</p>
+                <p className="text-xs text-slate-500">{attempt.student_email}</p>
               </div>
+              <div className="min-w-[120px]">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Score</p>
+                <p className="font-semibold text-slate-900">{formatPercent(attempt.percentage)}</p>
+              </div>
+              <div className="min-w-[120px]">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Status</p>
+                <Badge className={statusColor(attempt.status)}>{attempt.status}</Badge>
+              </div>
+              <div className="min-w-[120px]">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Time</p>
+                <p className="font-semibold text-slate-900">{formatTime(attempt.time_taken)}</p>
+              </div>
+              <div className="min-w-[120px]">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Completed</p>
+                <p className="font-semibold text-slate-900">{formatDate(attempt.completed_at)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mt-8">
+              <div className="rounded-3xl bg-slate-50 p-4 text-center">
+                <p className="text-sm text-slate-500">Correct</p>
+                <p className="mt-2 text-3xl font-bold text-emerald-600">{attempt.correct_answers}</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-4 text-center">
+                <p className="text-sm text-slate-500">Incorrect</p>
+                <p className="mt-2 text-3xl font-bold text-rose-600">{attempt.incorrect_answers}</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-4 text-center">
+                <p className="text-sm text-slate-500">Unanswered</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">{attempt.unanswered}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900">Summary</h3>
+            <div className="mt-4 space-y-3 text-sm text-slate-600">
+              <div className="flex items-center justify-between">
+                <span>Quiz</span>
+                <span className="font-medium text-slate-900">{attempt.quiz_title}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Question count</span>
+                <span className="font-medium text-slate-900">{attempt.total_questions || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Duration</span>
+                <span className="font-medium text-slate-900">{attempt.duration || '—'} min</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Pass threshold</span>
+                <span className="font-medium text-slate-900">{attempt.passing_score ? `${attempt.passing_score}%` : '—'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-slate-900">Answer review</h3>
+          {attempt.answers?.map((answer, index) => (
+            <div key={answer.id} className={`rounded-3xl border p-5 ${answer.is_correct ? 'border-emerald-200 bg-emerald-50' : answer.selected_option_id ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <p className="font-semibold text-slate-900"><span className="text-slate-500">Q{index + 1}.</span> {answer.question_text}</p>
+                <Badge className={answer.is_correct ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}>{answer.is_correct ? 'Correct' : 'Incorrect'}</Badge>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 text-sm text-slate-700">
+                <div>
+                  <p className="text-slate-500">Selected answer</p>
+                  <p className={`mt-1 font-medium ${answer.is_correct ? 'text-emerald-700' : 'text-rose-700'}`}>{answer.selected_option_text || 'Not answered'}</p>
+                </div>
+                {!answer.is_correct && (
+                  <div>
+                    <p className="text-slate-500">Correct answer</p>
+                    <p className="mt-1 font-medium text-emerald-700">{answer.correct_option_text}</p>
+                  </div>
+                )}
+              </div>
+              {answer.explanation && (
+                <div className="mt-4 rounded-3xl bg-white border border-slate-200 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900">Explanation</p>
+                  <p className="mt-2">{answer.explanation}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -6,8 +6,8 @@ const getAll = async ({ role, search, category, difficulty, sort, status } = {})
   let params = [];
   let idx = 1;
 
-  // Students only see published quizzes
-  if (role === 'STUDENT') {
+  // Public users and students only see published quizzes.
+  if (role !== 'ADMIN') {
     conditions.push(`q.status = 'published'`);
   } else if (status) {
     // Admin can filter by status

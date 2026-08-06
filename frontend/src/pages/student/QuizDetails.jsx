@@ -45,47 +45,66 @@ export default function QuizDetails() {
 
   return (
     <StudentLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        {quiz.thumbnail_url && (
-          <img src={quiz.thumbnail_url} alt="" className="w-full h-48 object-cover rounded-xl" />
-        )}
-
-        <div className="card">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
-            <Badge className={difficultyColor(quiz.difficulty)}>{quiz.difficulty}</Badge>
-          </div>
-
-          {quiz.description && <p className="text-gray-600 mb-6">{quiz.description}</p>}
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-600"><span>🏷️</span><span>{quiz.category_name || 'Uncategorized'}</span></div>
-            <div className="flex items-center gap-2 text-gray-600"><span>❓</span><span>{quiz.question_count} Questions</span></div>
-            <div className="flex items-center gap-2 text-gray-600"><span>⏱️</span><span>{quiz.duration} Minutes</span></div>
-            <div className="flex items-center gap-2 text-gray-600"><span>🎯</span><span>Pass: {quiz.passing_score}%</span></div>
-            <div className="flex items-center gap-2 text-gray-600"><span>🔁</span><span>Max Attempts: {quiz.max_attempts}</span></div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <span>📊</span>
-              <span>Attempts left: <strong className={attemptsLeft === 0 ? 'text-red-600' : 'text-green-600'}>{attemptsLeft}</strong></span>
-            </div>
-          </div>
-
-          {error && <p className="text-red-600 text-sm mt-4">{error}</p>}
-
-          <div className="mt-6">
-            {attemptsLeft === 0 ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <p className="text-red-600 font-medium">You have used all attempts for this quiz.</p>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          {quiz.thumbnail_url && (
+            <img src={quiz.thumbnail_url} alt={quiz.title} className="w-full h-64 object-cover" />
+          )}
+          <div className="p-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">{quiz.title}</h1>
+                <p className="mt-2 text-sm text-slate-500">{quiz.description || 'No description available for this quiz.'}</p>
               </div>
-            ) : (
-              <button
-                onClick={handleStart}
-                disabled={starting}
-                className="btn-primary w-full py-3 text-base"
-              >
-                {starting ? 'Starting…' : '🚀 Start Quiz'}
-              </button>
-            )}
+              <Badge className={difficultyColor(quiz.difficulty)}>{quiz.difficulty}</Badge>
+            </div>
+
+            <div className="grid gap-4 mt-8 sm:grid-cols-2">
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Category</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.category_name || 'Uncategorized'}</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Duration</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.duration} min</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Questions</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.question_count}</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Passing score</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.passing_score}%</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 mt-6 sm:grid-cols-2">
+              <div className="rounded-3xl bg-white border border-slate-200 p-5">
+                <p className="text-sm text-slate-500">Attempts available</p>
+                <p className={`mt-2 text-2xl font-bold ${attemptsLeft === 0 ? 'text-red-600' : 'text-emerald-600'}`}>{attemptsLeft}</p>
+              </div>
+              <div className="rounded-3xl bg-white border border-slate-200 p-5">
+                <p className="text-sm text-slate-500">Quiz status</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{quiz.status || 'Published'}</p>
+              </div>
+            </div>
+
+            {error && <div className="rounded-3xl bg-rose-50 border border-rose-200 px-4 py-3 mt-6 text-sm text-rose-700">{error}</div>}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-slate-500">Ready to test your knowledge? Start the quiz and see your results instantly.</div>
+              {attemptsLeft === 0 ? (
+                <div className="rounded-3xl bg-red-50 border border-red-200 px-5 py-3 text-sm font-medium text-red-700">No attempts remaining</div>
+              ) : (
+                <button
+                  onClick={handleStart}
+                  disabled={starting}
+                  className="btn-primary w-full sm:w-auto py-3 text-base"
+                >
+                  {starting ? 'Starting…' : '🚀 Start Quiz'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

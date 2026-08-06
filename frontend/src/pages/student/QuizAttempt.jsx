@@ -4,6 +4,7 @@ import { startQuiz, submitQuiz } from '../../api/attempt.api';
 import { useTimer } from '../../hooks/useTimer';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import QuizTimer from '../../components/student/QuizTimer';
 
 function TimerDisplay({ minutes, seconds, secondsLeft }) {
   const urgent = secondsLeft !== null && secondsLeft < 60;
@@ -92,12 +93,20 @@ export default function QuizAttempt() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10 px-6 py-3 flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-gray-900">{attemptData.quiz?.title}</h1>
-          <p className="text-sm text-gray-500">Question {current + 1} of {questions.length}</p>
+      <header className="bg-white border-b sticky top-0 z-10 px-6 py-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="font-bold text-gray-900">{attemptData.quiz?.title}</h1>
+            <p className="text-sm text-gray-500">Question {current + 1} of {questions.length}</p>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <QuizTimer secondsLeft={secondsLeft} maxSeconds={attemptData.quiz?.duration * 60 || 300} />
+            <div className="rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">Remaining</p>
+              <p>{secondsLeft !== null ? `${minutes}:${String(seconds).padStart(2, '0')}` : '--:--'}</p>
+            </div>
+          </div>
         </div>
-        <TimerDisplay minutes={minutes} seconds={seconds} secondsLeft={secondsLeft} />
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6 flex gap-6">

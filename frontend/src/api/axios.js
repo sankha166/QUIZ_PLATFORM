@@ -15,14 +15,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally — clear token and redirect to login
+// Handle 401 globally — clear token and redirect to login.
+// Public API requests can opt out by setting `skipAuthRedirect: true` on the request config.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
+      const config = err.config || {};
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      if (!config.skipAuthRedirect) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }

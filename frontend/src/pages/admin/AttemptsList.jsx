@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAdminAttempts } from '../../api/admin.api';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -18,50 +18,74 @@ export default function AttemptsList() {
   useEffect(() => {
     setLoading(true);
     getAdminAttempts({ page, limit })
-      .then((r) => { setAttempts(r.data.attempts); setTotal(r.data.total); })
+      .then((r) => { setAttempts(r.data.attempts || []); setTotal(r.data.total || 0); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [page]);
 
+  const stats = useMemo(() => ({
+    completed: attempts.filter((a) => a.status === 'completed').length,
+    passed: attempts.filter((a) => a.status === 'passed').length,
+    failed: attempts.filter((a) => a.status === 'failed').length,
+  }), [attempts]);
+
   return (
     <AdminLayout>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">All Attempts</h2>
-          <span className="text-sm text-gray-500">{total} total</span>
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total attempts</p>
+            <p className="mt-3 text-3xl font-bold text-slate-900">{total}</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Passed</p>
+            <p className="mt-3 text-3xl font-bold text-emerald-600">{stats.passed}</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Failed</p>
+            <p className="mt-3 text-3xl font-bold text-rose-600">{stats.failed}</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Open attempts</p>
+            <p className="mt-3 text-3xl font-bold text-slate-900">{total - stats.completed}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Quiz Attempts</h2>
+            <p className="text-sm text-slate-500">Review individual student attempts and performance.</p>
+          </div>
+          <span className="rounded-3xl bg-slate-50 px-4 py-3 text-sm text-slate-700">Showing page {page}</span>
         </div>
 
         <div className="card p-0 overflow-hidden">
           {loading ? (
             <LoadingSpinner className="py-16" />
           ) : attempts.length === 0 ? (
-            <EmptyState icon="📋" title="No attempts yet" />
+            <EmptyState icon="📋" title="No attempts yet" description="There are no quiz attempts to display." />
           ) : (
             <>
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     {['Student', 'Quiz', 'Score', 'Status', 'Date', 'Actions'].map((h) => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                      <th key={h} className="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-[0.2em]">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {attempts.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{a.student_name}</p>
-                        <p className="text-xs text-gray-400">{a.student_email}</p>
+                    <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-slate-900">{a.student_name}</p>
+                        <p className="text-xs text-slate-500">{a.student_email}</p>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">{a.quiz_title}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{formatPercent(a.percentage)}</td>
-                      <td className="px-4 py-3">
-                        <Badge className={statusColor(a.status)}>{a.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">{formatDate(a.completed_at)}</td>
-                      <td className="px-4 py-3">
-                        <Link to={`/admin/attempts/${a.id}`} className="text-xs text-indigo-600 hover:underline">View</Link>
-                      </td>
+                      <td className="px-4 py-4 text-slate-700">{a.quiz_title}</td>
+                      <td className="px-4 py-4 font-semibold text-slate-900">{formatPercent(a.percentage)}</td>
+                      <td className="px-4 py-4"><Badge className={statusColor(a.status)}>{a.status}</Badge></td>
+                      <td className="px-4 py-4 text-slate-400">{formatDate(a.completed_at)}</td>
+                      <td className="px-4 py-4"><Link to={`/admin/attempts/${a.id}`} className="text-xs text-indigo-600 hover:underline">View</Link></td>
                     </tr>
                   ))}
                 </tbody>

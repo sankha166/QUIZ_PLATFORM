@@ -5,7 +5,8 @@ const authenticate = require('../middleware/auth');
 const adminOnly = require('../middleware/adminOnly');
 const validate = require('../middleware/validate');
 
-router.get('/', authenticate, ctrl.getAll);
+// Public quiz listing so the landing page can render without requiring login.
+router.get('/', ctrl.getAll);
 router.get('/:id', authenticate, ctrl.getById);
 
 router.post('/',

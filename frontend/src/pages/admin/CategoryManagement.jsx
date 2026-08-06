@@ -25,22 +25,25 @@ function CategoryModal({ category, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-semibold mb-4">{category ? 'Edit Category' : 'New Category'}</h3>
-        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h3 className="text-xl font-semibold text-slate-900">{category ? 'Edit Category' : 'Create Category'}</h3>
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-900">✕</button>
+        </div>
+        {error && <div className="rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 mb-4">{error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="label">Name</label>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. JavaScript" />
           </div>
           <div>
-            <label className="label">Description (optional)</label>
-            <textarea className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+            <label className="label">Description</label>
+            <textarea className="input" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
           </div>
-          <div className="flex gap-3 justify-end pt-2">
+          <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save category'}</button>
           </div>
         </form>
       </div>
@@ -56,7 +59,10 @@ export default function CategoryManagement() {
 
   const fetch = () => {
     setLoading(true);
-    getCategories().then((r) => setCategories(r.data.categories)).catch(console.error).finally(() => setLoading(false));
+    getCategories()
+      .then((r) => setCategories(r.data.categories || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   };
 
   useEffect(fetch, []);
@@ -71,36 +77,49 @@ export default function CategoryManagement() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Categories</h2>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Categories</h2>
+            <p className="text-sm text-slate-500">Organize your quizzes with categories and labels.</p>
+          </div>
           <button onClick={() => setModal('create')} className="btn-primary">+ New Category</button>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {categories.slice(0, 3).map((category) => (
+            <div key={category.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-slate-500 uppercase tracking-[0.2em]">{category.name}</p>
+              <p className="mt-3 text-sm text-slate-600">{category.description || 'No description yet.'}</p>
+              <p className="mt-4 text-xs text-slate-400">{category.quiz_count || 0} quizzes</p>
+            </div>
+          ))}
         </div>
 
         <div className="card p-0 overflow-hidden">
           {loading ? (
             <LoadingSpinner className="py-16" />
           ) : categories.length === 0 ? (
-            <EmptyState icon="🏷️" title="No categories yet" message="Create your first category to organize quizzes." />
+            <EmptyState icon="🏷️" title="No categories yet" message="Create your first category to keep quizzes organized." />
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   {['Name', 'Description', 'Quizzes', 'Actions'].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                    <th key={h} className="text-left px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-[0.2em]">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {categories.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{c.description || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{c.quiz_count}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => setModal(c)} className="text-xs text-indigo-600 hover:underline">Edit</button>
-                        <button onClick={() => setDeleteTarget(c)} className="text-xs text-red-600 hover:underline">Delete</button>
+                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-4 font-medium text-slate-900">{c.name}</td>
+                    <td className="px-4 py-4 text-slate-500">{c.description || '—'}</td>
+                    <td className="px-4 py-4 text-slate-600">{c.quiz_count || 0}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setModal(c)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-indigo-600 hover:bg-slate-100">Edit</button>
+                        <button onClick={() => setDeleteTarget(c)} className="rounded-full border border-rose-200 px-3 py-1 text-xs text-rose-600 hover:bg-rose-50">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -122,7 +141,7 @@ export default function CategoryManagement() {
       <ConfirmModal
         isOpen={!!deleteTarget}
         title="Delete Category"
-        message={`Delete "${deleteTarget?.name}"? This cannot be undone if no quizzes are linked.`}
+        message={`Delete "${deleteTarget?.name}"? This action cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
