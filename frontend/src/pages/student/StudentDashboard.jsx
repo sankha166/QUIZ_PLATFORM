@@ -9,6 +9,14 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useAuth } from '../../hooks/useAuth';
 import StreakTracker from '../../components/student/StreakTracker';
 
+import {
+  FaBullseye,
+  FaCheckCircle,
+  FaTimesCircle
+} from "react-icons/fa";
+import { HiChartBar } from
+"react-icons/hi";
+
 function StatCard({ icon, label, value, sub, tone = 'indigo' }) {
   const theme = {
     indigo: 'bg-indigo-50 text-indigo-700',
@@ -209,18 +217,28 @@ export default function StudentDashboard() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.35fr_0.95fr]">
           <div className="grid gap-4 sm:grid-cols-2">
-            <StatCard icon="🎯" label="Attempted" value={completed.length} tone="indigo" />
-            <StatCard icon="✅" label="Passed" value={passed} tone="green" />
-            <StatCard icon="❌" label="Failed" value={failed} tone="red" />
-            <StatCard icon="📊" label="Avg Score" value={avgScore ? `${avgScore}%` : '—'} tone="amber" />
+            <StatCard icon={<FaBullseye size={28} />} label="Attempted" value={completed.length} />
+            <StatCard
+  icon={<FaCheckCircle size={28} />}
+  label="Passed"
+  value={passed}
+  tone="green"
+/>
+            <StatCard
+  icon={<FaTimesCircle size={28} />}
+  label="Failed"
+  value={failed}
+  tone="red"
+/>
+            <StatCard
+  icon={<HiChartBar size={28} />}
+  label="Avg Score"
+  value={avgScore ? `${avgScore}%` : "--"}
+/>
           </div>
           <div className="card p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Theme</h2>
-            <p className="text-sm text-slate-500">Quick theme toggle.</p>
-            <div className="mt-4 flex gap-3">
-              <button className={`btn ${theme === 'light' ? 'bg-brand-600 text-white' : 'bg-slate-100'}`} onClick={() => setTheme('light')}>Light</button>
-              <button className={`btn ${theme === 'dark' ? 'bg-brand-600 text-white' : 'bg-slate-100'}`} onClick={() => setTheme('dark')}>Dark</button>
-            </div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Badges</h2>
+            <p className="text-sm text-slate-500">Quizora badge acchived.</p>
           </div>
         </div>
 
@@ -329,11 +347,9 @@ export default function StudentDashboard() {
 
             <div className="space-y-6">
               <div className="card p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Theme controls</h3>
-                <p className="text-sm text-slate-500">Toggle light and dark mode.</p>
-                <div className="mt-6 grid gap-3">
-                  <button type="button" onClick={() => setTheme('light')} className={`btn ${theme === 'light' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Light mode</button>
-                  <button type="button" onClick={() => setTheme('dark')} className={`btn ${theme === 'dark' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Dark mode</button>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Global Ranking</h3>
+                <p className="text-sm text-slate-500">Track your & climb the leaderboard.</p>
+                <div className="card p-20">
                 </div>
               </div>
 
