@@ -82,11 +82,13 @@ const getById = async (id, role) => {
 };
 
 const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url }) => {
+  // Coerce empty-string / falsy category_id to null so the FK column stays valid
+  const catId = category_id ? parseInt(category_id, 10) : null;
   const result = await query(
     `INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft')
      RETURNING *`,
-    [title, description || null, category_id, difficulty, duration, passing_score, max_attempts || 1, thumbnail_url || null]
+    [title, description || null, isNaN(catId) ? null : catId, difficulty, duration, passing_score, max_attempts || 1, thumbnail_url || null]
   );
   return result.rows[0];
 };
@@ -99,8 +101,14 @@ const update = async (id, fields) => {
 
   for (const key of allowed) {
     if (fields[key] !== undefined) {
+      let val = fields[key];
+      // Coerce empty-string category_id to null for the FK column
+      if (key === 'category_id') {
+        val = val ? parseInt(val, 10) : null;
+        if (isNaN(val)) val = null;
+      }
       updates.push(`${key} = $${idx}`);
-      params.push(fields[key]);
+      params.push(val);
       idx++;
     }
   }

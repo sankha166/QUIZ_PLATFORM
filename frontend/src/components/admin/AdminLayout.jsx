@@ -36,6 +36,7 @@ export default function AdminLayout({ children }) {
       <aside className={`${sidebarOpen ? 'w-72' : 'w-20'} bg-slate-950 text-slate-100 flex flex-col transition-all duration-300 shadow-xl`}>
         <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3">
             <img
               src="/logo1.png"
               alt="Quizora logo"
@@ -47,6 +48,7 @@ export default function AdminLayout({ children }) {
                 <p className="text-xs text-slate-400">Admin console</p>
               </div>
             )}
+            </Link>
           </div>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

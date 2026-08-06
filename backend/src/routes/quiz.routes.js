@@ -2,11 +2,13 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const ctrl = require('../controllers/quiz.controller');
 const authenticate = require('../middleware/auth');
+const optionalAuth = require('../middleware/optionalAuth');
 const adminOnly = require('../middleware/adminOnly');
 const validate = require('../middleware/validate');
 
-// Public quiz listing so the landing page can render without requiring login.
-router.get('/', ctrl.getAll);
+// Use optional auth so admin users get their role recognized (to see drafts/unpublished),
+// while unauthenticated visitors still get the public published-only listing.
+router.get('/', optionalAuth, ctrl.getAll);
 router.get('/:id', authenticate, ctrl.getById);
 
 router.post('/',

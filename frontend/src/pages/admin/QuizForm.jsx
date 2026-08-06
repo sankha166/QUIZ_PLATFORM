@@ -31,9 +31,12 @@ export default function QuizForm() {
     }
   }, [id, isEdit, reset]);
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (formData) => {
     setError('');
     try {
+      // Convert empty-string category_id to null so the backend FK column stays valid
+      const data = { ...formData };
+      if (!data.category_id) data.category_id = null;
       if (isEdit) await updateQuiz(id, data);
       else await createQuiz(data);
       navigate('/admin/quizzes');

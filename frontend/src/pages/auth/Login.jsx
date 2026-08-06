@@ -33,7 +33,7 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col justify-center px-16 w-full">
           <Link to="/" className="flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xl font-bold">Q</div>
+            <img src="/logo1.png" alt="Quizora logo" className="w-10 h-10 rounded-2x1 object-cover" />
             <span className="font-extrabold text-white text-xl">Quizora</span>
           </Link>
 
