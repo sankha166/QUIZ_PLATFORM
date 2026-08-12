@@ -1,16 +1,13 @@
 const { query } = require('../config/db');
 const notifService = require('./notification.service');
 
-const getAll = async ({ role, search, category, difficulty, sort, status } = {}) => {
-  let conditions = [];
-  let params = [];
+const getAll = async ({ role, search, category, domain_id, difficulty, sort, status } = {}) => {
+  const conditions = [];
+  const params = [];
   let idx = 1;
 
-  // Public users and students only see published quizzes.
-  if (role !== 'ADMIN') {
-    conditions.push(`q.status = 'published'`);
-  } else if (status) {
-    // Admin can filter by status
+  if (role !== 'ADMIN') conditions.push(`q.status = 'published'`);
+  else if (status) {
     conditions.push(`q.status = $${idx}`);
     params.push(status);
     idx++;
@@ -22,9 +19,15 @@ const getAll = async ({ role, search, category, difficulty, sort, status } = {})
     idx++;
   }
 
-  if (category) {
+  if (category && category !== 'all') {
     conditions.push(`q.category_id = $${idx}`);
     params.push(category);
+    idx++;
+  }
+
+  if (domain_id && domain_id !== 'all') {
+    conditions.push(`c.domain_id = $${idx}`);
+    params.push(domain_id);
     idx++;
   }
 
@@ -35,21 +38,22 @@ const getAll = async ({ role, search, category, difficulty, sort, status } = {})
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
   let orderBy = 'q.created_at DESC';
   if (sort === 'popular') orderBy = 'attempt_count DESC';
   else if (sort === 'oldest') orderBy = 'q.created_at ASC';
 
   const result = await query(
-    `SELECT q.*, c.name AS category_name,
+    `SELECT q.*, c.name AS category_name, c.domain_id,
+            d.name AS domain_name,
             COUNT(DISTINCT qs.id)::int AS question_count,
-            COUNT(DISTINCT a.id)::int  AS attempt_count
+            COUNT(DISTINCT a.id)::int AS attempt_count
      FROM quizzes q
      LEFT JOIN categories c ON c.id = q.category_id
-     LEFT JOIN questions  qs ON qs.quiz_id = q.id
-     LEFT JOIN attempts   a  ON a.quiz_id = q.id
+     LEFT JOIN domains d ON d.id = c.domain_id
+     LEFT JOIN questions qs ON qs.quiz_id = q.id
+     LEFT JOIN attempts a ON a.quiz_id = q.id
      ${whereClause}
-     GROUP BY q.id, c.name
+     GROUP BY q.id, c.name, c.domain_id, d.name
      ORDER BY ${orderBy}`,
     params
   );
@@ -58,21 +62,19 @@ const getAll = async ({ role, search, category, difficulty, sort, status } = {})
 
 const getById = async (id, role) => {
   const result = await query(
-    `SELECT q.*, c.name AS category_name,
+    `SELECT q.*, c.name AS category_name, c.domain_id, d.name AS domain_name,
             COUNT(DISTINCT qs.id)::int AS question_count,
-            COUNT(DISTINCT a.id)::int  AS attempt_count
+            COUNT(DISTINCT a.id)::int AS attempt_count
      FROM quizzes q
-     LEFT JOIN categories c  ON c.id = q.category_id
-     LEFT JOIN questions  qs ON qs.quiz_id = q.id
-     LEFT JOIN attempts   a  ON a.quiz_id = q.id
+     LEFT JOIN categories c ON c.id = q.category_id
+     LEFT JOIN domains d ON d.id = c.domain_id
+     LEFT JOIN questions qs ON qs.quiz_id = q.id
+     LEFT JOIN attempts a ON a.quiz_id = q.id
      WHERE q.id = $1
-     GROUP BY q.id, c.name`,
+     GROUP BY q.id, c.name, c.domain_id, d.name`,
     [id]
   );
-
-  if (!result.rows.length) {
-    const err = new Error('Quiz not found'); err.status = 404; throw err;
-  }
+  if (!result.rows.length) { const err = new Error('Quiz not found'); err.status = 404; throw err; }
 
   const quiz = result.rows[0];
   if (role === 'STUDENT' && quiz.status !== 'published') {
@@ -82,7 +84,6 @@ const getById = async (id, role) => {
 };
 
 const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url }) => {
-  // Coerce empty-string / falsy category_id to null so the FK column stays valid
   const catId = category_id ? parseInt(category_id, 10) : null;
   const result = await query(
     `INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, status)
@@ -98,11 +99,9 @@ const update = async (id, fields) => {
   const updates = [];
   const params = [];
   let idx = 1;
-
   for (const key of allowed) {
     if (fields[key] !== undefined) {
       let val = fields[key];
-      // Coerce empty-string category_id to null for the FK column
       if (key === 'category_id') {
         val = val ? parseInt(val, 10) : null;
         if (isNaN(val)) val = null;
@@ -112,55 +111,32 @@ const update = async (id, fields) => {
       idx++;
     }
   }
-
-  if (!updates.length) {
-    const err = new Error('No fields to update'); err.status = 400; throw err;
-  }
-
-  updates.push(`updated_at = NOW()`);
+  if (!updates.length) { const err = new Error('No fields to update'); err.status = 400; throw err; }
+  updates.push('updated_at = NOW()');
   params.push(id);
-
-  const result = await query(
-    `UPDATE quizzes SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
-    params
-  );
-  if (!result.rows.length) {
-    const err = new Error('Quiz not found'); err.status = 404; throw err;
-  }
+  const result = await query(`UPDATE quizzes SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`, params);
+  if (!result.rows.length) { const err = new Error('Quiz not found'); err.status = 404; throw err; }
   return result.rows[0];
 };
 
 const updateStatus = async (id, status) => {
   if (status === 'published') {
     const qCount = await query('SELECT COUNT(*)::int AS cnt FROM questions WHERE quiz_id = $1', [id]);
-    if (qCount.rows[0].cnt === 0) {
-      const err = new Error('Cannot publish quiz with no questions'); err.status = 400; throw err;
-    }
-    // Notify all active students
+    if (qCount.rows[0].cnt === 0) { const err = new Error('Cannot publish quiz with no questions'); err.status = 400; throw err; }
     try {
       const quizInfo = await query('SELECT title FROM quizzes WHERE id = $1', [id]);
       const students = await query(`SELECT id FROM users WHERE role='STUDENT' AND status='active'`);
-      await notifService.notifyNewQuiz(students.rows.map(s => s.id), {
-        quizTitle: quizInfo.rows[0]?.title,
-        quizId: parseInt(id),
-      });
-    } catch (_) { /* non-fatal */ }
+      await notifService.notifyNewQuiz(students.rows.map(s => s.id), { quizTitle: quizInfo.rows[0]?.title, quizId: parseInt(id) });
+    } catch (_) {}
   }
-  const result = await query(
-    `UPDATE quizzes SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-    [status, id]
-  );
-  if (!result.rows.length) {
-    const err = new Error('Quiz not found'); err.status = 404; throw err;
-  }
+  const result = await query(`UPDATE quizzes SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`, [status, id]);
+  if (!result.rows.length) { const err = new Error('Quiz not found'); err.status = 404; throw err; }
   return result.rows[0];
 };
 
 const remove = async (id) => {
   const result = await query('DELETE FROM quizzes WHERE id = $1 RETURNING id', [id]);
-  if (!result.rows.length) {
-    const err = new Error('Quiz not found'); err.status = 404; throw err;
-  }
+  if (!result.rows.length) { const err = new Error('Quiz not found'); err.status = 404; throw err; }
   return { message: 'Quiz deleted successfully' };
 };
 

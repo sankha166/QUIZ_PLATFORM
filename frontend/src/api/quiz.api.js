@@ -7,14 +7,43 @@ export const updateQuiz = (id, data) => api.put(`/quizzes/${id}`, data);
 export const deleteQuiz = (id) => api.delete(`/quizzes/${id}`);
 export const updateQuizStatus = (id, status) => api.patch(`/quizzes/${id}/publish`, { status });
 
-// Questions
 export const getQuestions = (quizId) => api.get(`/quizzes/${quizId}/questions`);
 export const addQuestion = (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data);
 export const updateQuestion = (id, data) => api.put(`/questions/${id}`, data);
 export const deleteQuestion = (id) => api.delete(`/questions/${id}`);
 
-// Categories
-export const getCategories = () => api.get('/categories');
-export const createCategory = (data) => api.post('/categories', data);
-export const updateCategory = (id, data) => api.put(`/categories/${id}`, data);
+// IMPORTANT: domain_id must stay as the database numeric ID.
+// Converting it to a slug here breaks Domain -> Category filtering and quiz matching.
+export const getCategories = (params) => api.get('/categories', { params });
+
+export const createCategory = async (data) => {
+  const payload = { ...data };
+  if (!Number.isInteger(Number(payload.domain_id))) {
+    const response = await api.get('/domains');
+    const domain = (response.data.domains || []).find(
+      (d) =>
+        String(d.id) === String(payload.domain_id) ||
+        String(d.name).toLowerCase() === String(payload.domain_name || '').toLowerCase()
+    );
+    if (!domain) throw new Error('Selected domain was not found');
+    payload.domain_id = domain.id;
+  }
+  return api.post('/categories', payload);
+};
+
+export const updateCategory = async (id, data) => {
+  const payload = { ...data };
+  if (!Number.isInteger(Number(payload.domain_id))) {
+    const response = await api.get('/domains');
+    const domain = (response.data.domains || []).find(
+      (d) =>
+        String(d.id) === String(payload.domain_id) ||
+        String(d.name).toLowerCase() === String(payload.domain_name || '').toLowerCase()
+    );
+    if (!domain) throw new Error('Selected domain was not found');
+    payload.domain_id = domain.id;
+  }
+  return api.put(`/categories/${id}`, payload);
+};
+
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
