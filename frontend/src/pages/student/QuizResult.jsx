@@ -1,92 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect,useMemo,useState } from 'react';
+import { useParams,Link } from 'react-router-dom';
 import { getAttemptById } from '../../api/attempt.api';
 import StudentLayout from '../../components/student/StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
-import { formatTime, formatDate, statusColor } from '../../utils/helpers';
-
-export default function QuizResult() {
-  const { attemptId } = useParams();
-  const [attempt, setAttempt] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getAttemptById(attemptId)
-      .then((r) => setAttempt(r.data.attempt))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [attemptId]);
-
-  if (loading) return <StudentLayout><LoadingSpinner size="lg" className="py-20" /></StudentLayout>;
-  if (!attempt) return <StudentLayout><p className="text-center text-red-600 py-20">Result not found.</p></StudentLayout>;
-
-  const passed = attempt.status === 'passed';
-
-  return (
-    <StudentLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className={`rounded-3xl border p-8 ${passed ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="text-5xl">{passed ? '🎉' : '😔'}</div>
-            <h2 className="text-3xl font-bold text-slate-900">{attempt.quiz_title}</h2>
-            <Badge className={`text-base px-4 py-2 ${statusColor(attempt.status)}`}>
-              {passed ? '✅ PASSED' : '❌ FAILED'}
-            </Badge>
-            <p className={`text-6xl font-extrabold ${passed ? 'text-emerald-700' : 'text-rose-700'}`}>
-              {parseFloat(attempt.percentage).toFixed(1)}%
-            </p>
-            <p className="text-sm text-slate-600">Time taken: {formatTime(attempt.time_taken)} · {formatDate(attempt.completed_at)}</p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3 mt-10">
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Correct answers</p>
-              <p className="mt-3 text-3xl font-bold text-emerald-700">{attempt.correct_answers}</p>
-            </div>
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Incorrect answers</p>
-              <p className="mt-3 text-3xl font-bold text-rose-600">{attempt.incorrect_answers}</p>
-            </div>
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <p className="text-sm text-slate-500">Unanswered</p>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{attempt.unanswered}</p>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            <Link to="/student/quizzes" className="btn-secondary w-full text-center">Browse more quizzes</Link>
-            <Link to="/student/attempts" className="btn-primary w-full text-center">Review attempts</Link>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold text-slate-900">Answer Review</h3>
-          {attempt.answers?.map((a, i) => (
-            <div key={a.id} className={`rounded-3xl border-l-4 bg-white p-6 shadow-sm ${a.is_correct ? 'border-l-emerald-500' : a.selected_option_id ? 'border-l-rose-500' : 'border-l-slate-200'}`}>
-              <p className="font-semibold text-slate-900 mb-3"><span className="text-slate-400 mr-2">Q{i + 1}.</span>{a.question_text}</p>
-              <div className="space-y-3 text-sm text-slate-700">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                  <span className="w-28 text-slate-500">Your answer:</span>
-                  <span className={`font-medium ${a.is_correct ? 'text-emerald-700' : 'text-rose-600'}`}>{a.selected_option_text || <em className="text-slate-400">Not answered</em>}{a.is_correct && ' ✓'}</span>
-                </div>
-                {!a.is_correct && (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                    <span className="w-28 text-slate-500">Correct answer:</span>
-                    <span className="text-emerald-700 font-medium">{a.correct_option_text}</span>
-                  </div>
-                )}
-                {a.explanation && (
-                  <div className="rounded-3xl bg-slate-50 border border-slate-100 p-4 text-sm text-slate-600">
-                    <div className="flex items-center gap-2 text-slate-500 mb-2">💡 Explanation</div>
-                    <p>{a.explanation}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </StudentLayout>
-  );
-}
+import { formatTime,formatDate,statusColor } from '../../utils/helpers';
+function questionTime(s){s=Number(s)||0;return s<60?`${s}s`:`${Math.floor(s/60)}m ${s%60}s`}
+export default function QuizResult(){const{attemptId}=useParams();const[attempt,setAttempt]=useState(null),[loading,setLoading]=useState(true);useEffect(()=>{getAttemptById(attemptId).then(r=>setAttempt(r.data.attempt)).catch(console.error).finally(()=>setLoading(false))},[attemptId]);const stats=useMemo(()=>{if(!attempt?.answers)return{total:0,avg:0,fastest:0};const times=attempt.answers.map(a=>Number(a.time_taken)||0);return{total:times.length,avg:times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length):0,fastest:times.length?Math.min(...times):0}},[attempt]);if(loading)return <StudentLayout><LoadingSpinner size="lg" className="py-20"/></StudentLayout>;if(!attempt)return <StudentLayout><p className="text-center text-red-600 py-20">Result not found.</p></StudentLayout>;const passed=attempt.status==='passed';return <StudentLayout><div className="max-w-5xl mx-auto space-y-5 sm:space-y-7 min-w-0"><div className={`relative overflow-hidden rounded-3xl border p-5 sm:p-8 ${passed?'border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-cyan-50':'border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50'}`}><div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-indigo-200/20 blur-2xl"/><div className="relative text-center"><div className="text-5xl sm:text-6xl">{passed?'🏆':'📚'}</div><p className="mt-3 text-xs uppercase tracking-[0.25em] font-semibold text-indigo-600">Assessment complete</p><h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 break-words">{attempt.quiz_title}</h1><div className="mt-4 flex flex-wrap justify-center gap-2"><Badge className={`px-4 py-2 ${statusColor(attempt.status)}`}>{passed?'✓ PASSED':'✕ FAILED'}</Badge><span className="rounded-full bg-white/80 border px-4 py-2 text-sm font-medium text-slate-600">Completed {formatDate(attempt.completed_at)}</span></div><p className={`mt-6 text-5xl sm:text-7xl font-black ${passed?'text-emerald-600':'text-rose-600'}`}>{parseFloat(attempt.percentage).toFixed(1)}<span className="text-2xl sm:text-3xl">%</span></p><p className="mt-2 text-sm text-slate-500">Final score · {attempt.score} / {attempt.answers?.reduce((sum,a)=>sum+Number(a.marks||1),0)||'—'} marks</p></div><div className="relative mt-7 grid grid-cols-2 sm:grid-cols-4 gap-3"><div className="rounded-2xl bg-white/90 border p-4"><p className="text-xs text-slate-500">Correct</p><p className="mt-1 text-2xl font-bold text-emerald-600">{attempt.correct_answers}</p></div><div className="rounded-2xl bg-white/90 border p-4"><p className="text-xs text-slate-500">Incorrect</p><p className="mt-1 text-2xl font-bold text-rose-600">{attempt.incorrect_answers}</p></div><div className="rounded-2xl bg-white/90 border p-4"><p className="text-xs text-slate-500">Unanswered</p><p className="mt-1 text-2xl font-bold text-slate-700">{attempt.unanswered}</p></div><div className="rounded-2xl bg-white/90 border p-4"><p className="text-xs text-slate-500">Total time</p><p className="mt-1 text-2xl font-bold text-indigo-600">{formatTime(attempt.time_taken)}</p></div></div><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4"><p className="text-xs text-indigo-600">Avg. per question</p><p className="mt-1 font-bold text-indigo-800">{questionTime(stats.avg)}</p></div><div className="rounded-2xl bg-cyan-50 border border-cyan-100 p-4"><p className="text-xs text-cyan-700">Fastest question</p><p className="mt-1 font-bold text-cyan-800">{questionTime(stats.fastest)}</p></div></div><div className="mt-6 flex flex-col sm:flex-row gap-3"><Link to="/student/quizzes" className="btn-secondary flex-1 text-center">Explore more quizzes</Link><Link to="/student/attempts" className="btn-primary flex-1 text-center">View my attempts</Link></div></div><div><div className="flex items-end justify-between gap-3 mb-4"><div><h2 className="text-xl sm:text-2xl font-bold text-slate-900">Question Review</h2><p className="text-sm text-slate-500 mt-1">See your answer, correctness and time spent on each question.</p></div><span className="hidden sm:block rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{stats.total} questions</span></div><div className="space-y-3">{attempt.answers?.map((a,i)=><div key={a.id} className={`rounded-2xl sm:rounded-3xl border bg-white p-4 sm:p-6 shadow-sm border-l-4 ${a.is_correct?'border-l-emerald-500':a.selected_option_id?'border-l-rose-500':'border-l-slate-300'}`}><div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"><p className="font-semibold text-slate-900 leading-6"><span className="text-slate-400 mr-2">Q{i+1}.</span>{a.question_text}</p><span className="shrink-0 self-start rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">⏱ {questionTime(a.time_taken)}</span></div><div className="mt-4 space-y-3 text-sm"><div className="rounded-xl bg-slate-50 p-3"><span className="text-slate-500">Your answer: </span><span className={`font-semibold ${a.is_correct?'text-emerald-700':'text-rose-600'}`}>{a.selected_option_text||'Not answered'} {a.is_correct?'✓':''}</span></div>{!a.is_correct&&<div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3"><span className="text-emerald-700">Correct answer: </span><span className="font-semibold text-emerald-800">{a.correct_option_text}</span></div>}{a.explanation&&<div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-slate-600"><p className="font-semibold text-indigo-700 mb-1">💡 Explanation</p><p>{a.explanation}</p></div>}</div></div>)}</div></div></div></StudentLayout>}
