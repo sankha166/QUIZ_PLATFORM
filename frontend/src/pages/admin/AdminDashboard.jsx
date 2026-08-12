@@ -6,6 +6,17 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { 
+  Users, 
+  FileText, 
+  CheckCircle2, 
+  FilePenLine, 
+  HelpCircle, 
+  Target, 
+  BarChart3, 
+  Trophy, 
+  XCircle 
+} from 'lucide-react';
 
 const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6'];
 
@@ -49,16 +60,16 @@ export default function AdminDashboard() {
       <div className="space-y-6">
         {/* Stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <StatCard icon="👥" label="Total Students" value={stats?.totalStudents} color="indigo" />
-          <StatCard icon="📝" label="Total Quizzes" value={stats?.totalQuizzes} color="purple" />
-          <StatCard icon="✅" label="Published Quizzes" value={stats?.publishedQuizzes} color="green" />
-          <StatCard icon="📋" label="Draft Quizzes" value={stats?.draftQuizzes} color="yellow" />
-          <StatCard icon="❓" label="Total Questions" value={stats?.totalQuestions} color="blue" />
-          <StatCard icon="🎯" label="Total Attempts" value={stats?.totalAttempts} color="indigo" />
-          <StatCard icon="📊" label="Avg Score" value={stats?.averageScore ? `${stats.averageScore}%` : '—'} color="purple" />
-          <StatCard icon="🏆" label="Passed" value={stats?.passedAttempts} color="green" />
-          <StatCard icon="❌" label="Failed" value={stats?.failedAttempts} color="red" />
-        </div>
+  <StatCard icon={<Users className="w-5 h-5" />} label="Total Students" value={stats?.totalStudents} color="indigo" />
+  <StatCard icon={<FileText className="w-5 h-5" />} label="Total Quizzes" value={stats?.totalQuizzes} color="purple" />
+  <StatCard icon={<CheckCircle2 className="w-5 h-5" />} label="Published Quizzes" value={stats?.publishedQuizzes} color="green" />
+  <StatCard icon={<FilePenLine className="w-5 h-5" />} label="Draft Quizzes" value={stats?.draftQuizzes} color="yellow" />
+  <StatCard icon={<HelpCircle className="w-5 h-5" />} label="Total Questions" value={stats?.totalQuestions} color="blue" />
+  <StatCard icon={<Target className="w-5 h-5" />} label="Total Attempts" value={stats?.totalAttempts} color="indigo" />
+  <StatCard icon={<BarChart3 className="w-5 h-5" />} label="Avg Score" value={stats?.averageScore ? `${stats.averageScore}%` : '—'} color="purple" />
+  <StatCard icon={<Trophy className="w-5 h-5" />} label="Passed" value={stats?.passedAttempts} color="green" />
+  <StatCard icon={<XCircle className="w-5 h-5" />} label="Failed" value={stats?.failedAttempts} color="red" />
+</div>
 
         {/* Charts row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

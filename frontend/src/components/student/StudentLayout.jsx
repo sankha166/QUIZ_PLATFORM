@@ -63,7 +63,7 @@ export default function StudentLayout({ children }) {
               </Link>
             </div>
 
-            <div className="hidden md:flex items-center gap-6 rounded-2xl border border-slate-200 bg-white px-6 py-2 shadow-sm">
+            <div>
               {navItems.map((item) => (
                 <Link
                   key={item.path}
@@ -109,7 +109,7 @@ export default function StudentLayout({ children }) {
                         className="block rounded-2xl px-4 py-3 text-sm text-slate-700 hover:bg-slate-50"
                         onClick={() => setProfileMenuOpen(false)}
                       >
-                        Change password
+                        
                       </Link>
                       <button
                         type="button"

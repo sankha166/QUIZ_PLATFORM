@@ -18,6 +18,21 @@ const DEFAULT_AVATARS = [
   'https://api.dicebear.com/6.x/bottts/svg?seed=learn8',
   'https://api.dicebear.com/6.x/pixel-art/svg?seed=learn9',
   'https://api.dicebear.com/6.x/adventurer/svg?seed=learn10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlYlNHicTjk1uYmnJIUJBh9U1GMMH8PDO1qDrIw8tpdQ&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTU8TFJ7iUwyhF0_LOmPpst5aFLBQUYvRcuREn63JTVvg&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7akOjBI95n5CWepEIzJ0gtQE6xVMLrUn8mnJAjkuypw&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOIzp2EOXMC3orJnhxRiAenLjTqzuicH-_Vby3ph7tJg&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBp0pLXlXflTnbcz_VcatnfPG1kUVuAD33mwuQ8Lm8aQ&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT3Ln8J4Q1GPF3CQ9WdaELBV8Q0qLfPDk8ubpMSQahCA&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTY_pf1cf_eaeOzqPPAIaC0j0my_Mho66ZbwpjMiwJ-jA&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTiZTaROKITuewuYJaWGrL_FCOhWo_5prT6wVRjMHwizQ&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS91zVyenxyN3qP62boJheb4notS64SHJVPOgubtzynmA&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrOTJr036_NXVumyDroMHa_vSy1Q4DduNXULYYG9oP8Q&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT6pL_YZCbmyWpa_aiok6gVZnGc9SYm2JmWIjJV2vI5jA&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRStnG2nVzuVO4cLSVf4sU_F_CFfMfHMK3hLB_Bf8-Uaw&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT046q71faCFoKHVBQ7rjrknlrgyXW40woftfVRX_D-CQ&s=10',
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTsqeyswCSY55kxnA1mlqk0KHml5-BscQaJGOr7Mr_Dug&s=10',
+  
 ];
 
 const TABS = [
