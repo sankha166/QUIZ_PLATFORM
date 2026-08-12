@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getQuizzes, deleteQuiz, updateQuizStatus, getCategories } from '../../api/quiz.api';
+import { getDomains } from '../../api/domain.api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -8,33 +9,10 @@ import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
 import { statusColor, difficultyColor, getErrorMessage } from '../../utils/helpers';
 
-const DOMAIN_STORAGE_KEY = 'quiz_platform_admin_domains_v1';
-const CATEGORY_DOMAIN_KEY = 'quiz_platform_category_domains_v1';
-
-const ENGINEERING = { id: 'engineering', name: 'Engineering' };
-
-function getDomains() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(DOMAIN_STORAGE_KEY) || '[]');
-    if (!Array.isArray(saved)) return [ENGINEERING];
-    return saved.some((d) => d.id === 'engineering') ? saved : [ENGINEERING, ...saved];
-  } catch {
-    return [ENGINEERING];
-  }
-}
-
-function getCategoryMap() {
-  try {
-    return JSON.parse(localStorage.getItem(CATEGORY_DOMAIN_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
-
 export default function QuizManagement() {
   const [quizzes, setQuizzes] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [domains, setDomains] = useState(getDomains);
+  const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [search, setSearch] = useState('');
@@ -42,29 +20,16 @@ export default function QuizManagement() {
   const [domainFilter, setDomainFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const fetch = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const [quizResponse, categoryResponse] = await Promise.all([
+      const [quizResponse, categoryResponse, domainResponse] = await Promise.all([
         getQuizzes({ search, status: statusFilter || undefined }),
         getCategories(),
+        getDomains(),
       ]);
-
-      const incomingCategories = categoryResponse.data.categories || [];
-      const categoryMap = getCategoryMap();
-      const normalizedCategories = incomingCategories.map((c) => ({
-        ...c,
-        domain_id: c.domain_id || categoryMap[String(c.id)] || 'engineering',
-        domain_name:
-          c.domain_name ||
-          getDomains().find(
-            (d) => d.id === (c.domain_id || categoryMap[String(c.id)] || 'engineering')
-          )?.name ||
-          'Engineering',
-      }));
-
-      setCategories(normalizedCategories);
-      setDomains(getDomains());
+      setCategories(categoryResponse.data.categories || []);
+      setDomains(domainResponse.data.domains || []);
       setQuizzes(quizResponse.data.quizzes || []);
     } catch (err) {
       console.error(err);
@@ -73,81 +38,48 @@ export default function QuizManagement() {
     }
   };
 
-  useEffect(() => {
-    fetch();
-  }, [search, statusFilter]);
+  useEffect(() => { fetchData(); }, [search, statusFilter]);
 
   const categoryLookup = useMemo(
     () => Object.fromEntries(categories.map((c) => [String(c.id), c])),
     [categories]
   );
 
-  const visibleCategories = useMemo(
-    () =>
-      domainFilter === 'all'
-        ? categories
-        : categories.filter((c) => String(c.domain_id) === String(domainFilter)),
-    [categories, domainFilter]
-  );
+  const visibleCategories = useMemo(() => (
+    domainFilter === 'all'
+      ? categories
+      : categories.filter((c) => String(c.domain_id) === String(domainFilter))
+  ), [categories, domainFilter]);
 
-  const filteredQuizzes = useMemo(() => {
-    return quizzes
-      .map((q) => {
-        const category =
-          categoryLookup[String(q.category_id)] ||
-          categories.find((c) => c.name === q.category_name);
-
-        return {
-          ...q,
-          resolved_category: category,
-          resolved_domain_id:
-            q.domain_id ||
-            category?.domain_id ||
-            'engineering',
-          resolved_domain_name:
-            q.domain_name ||
-            category?.domain_name ||
-            'Engineering',
-        };
-      })
-      .filter((q) => {
-        const domainOk =
-          domainFilter === 'all' ||
-          String(q.resolved_domain_id) === String(domainFilter);
-
-        const categoryOk =
-          categoryFilter === 'all' ||
-          String(q.category_id) === String(categoryFilter);
-
-        return domainOk && categoryOk;
-      })
-      .sort((a, b) => {
-        const domainCompare = a.resolved_domain_name.localeCompare(b.resolved_domain_name);
-        if (domainCompare !== 0) return domainCompare;
-        const categoryCompare = (a.category_name || '').localeCompare(b.category_name || '');
-        if (categoryCompare !== 0) return categoryCompare;
-        return (a.title || '').localeCompare(b.title || '');
-      });
-  }, [quizzes, categories, categoryLookup, domainFilter, categoryFilter]);
+  const filteredQuizzes = useMemo(() => quizzes.map((q) => {
+    const category = categoryLookup[String(q.category_id)];
+    return {
+      ...q,
+      resolved_category: category,
+      resolved_domain_id: q.domain_id ?? category?.domain_id ?? null,
+      resolved_domain_name: q.domain_name ?? category?.domain_name ?? 'Unknown',
+    };
+  }).filter((q) => {
+    const domainOk = domainFilter === 'all' || String(q.resolved_domain_id) === String(domainFilter);
+    const categoryOk = categoryFilter === 'all' || String(q.category_id) === String(categoryFilter);
+    return domainOk && categoryOk;
+  }).sort((a, b) => {
+    const domainCompare = (a.resolved_domain_name || '').localeCompare(b.resolved_domain_name || '');
+    if (domainCompare !== 0) return domainCompare;
+    const categoryCompare = (a.category_name || '').localeCompare(b.category_name || '');
+    if (categoryCompare !== 0) return categoryCompare;
+    return (a.title || '').localeCompare(b.title || '');
+  }), [quizzes, categoryLookup, domainFilter, categoryFilter]);
 
   const handleToggleStatus = async (quiz) => {
     const newStatus = quiz.status === 'published' ? 'unpublished' : 'published';
-    try {
-      await updateQuizStatus(quiz.id, newStatus);
-      fetch();
-    } catch (err) {
-      alert(getErrorMessage(err));
-    }
+    try { await updateQuizStatus(quiz.id, newStatus); fetchData(); }
+    catch (err) { alert(getErrorMessage(err)); }
   };
 
   const handleDelete = async () => {
-    try {
-      await deleteQuiz(deleteTarget.id);
-      setDeleteTarget(null);
-      fetch();
-    } catch (err) {
-      alert(getErrorMessage(err));
-    }
+    try { await deleteQuiz(deleteTarget.id); setDeleteTarget(null); fetchData(); }
+    catch (err) { alert(getErrorMessage(err)); }
   };
 
   return (
@@ -156,59 +88,25 @@ export default function QuizManagement() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Quiz Management</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Find quizzes quickly using Domain → Category → Quiz.
-            </p>
+            <p className="text-sm text-gray-500 mt-1">Find quizzes quickly using Domain → Category → Quiz.</p>
           </div>
-          <Link to="/admin/quizzes/create" className="btn-primary w-full sm:w-auto text-center">
-            + New Quiz
-          </Link>
+          <Link to="/admin/quizzes/create" className="btn-primary w-full sm:w-auto text-center">+ New Quiz</Link>
         </div>
 
         <div className="card">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-            <input
-              className="input w-full"
-              placeholder="Search quizzes…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            <select
-              className="input w-full"
-              value={domainFilter}
-              onChange={(e) => {
-                setDomainFilter(e.target.value);
-                setCategoryFilter('all');
-              }}
-            >
+            <input className="input w-full" placeholder="Search quizzes…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select className="input w-full" value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setCategoryFilter('all'); }}>
               <option value="all">All domains</option>
-              {domains.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+              {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <select className="input w-full" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="all">All categories</option>
+              {visibleCategories.slice().sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-
-            <select
-              className="input w-full"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">All categories</option>
-              {visibleCategories
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
-
-            <select
-              className="input w-full"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
+            <select className="input w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
@@ -218,77 +116,28 @@ export default function QuizManagement() {
         </div>
 
         <div className="card p-0 overflow-hidden">
-          {loading ? (
-            <LoadingSpinner className="py-16" />
-          ) : filteredQuizzes.length === 0 ? (
-            <EmptyState icon="📝" title="No quizzes found" />
-          ) : (
+          {loading ? <LoadingSpinner className="py-16" /> : filteredQuizzes.length === 0 ? <EmptyState icon="📝" title="No quizzes found" /> : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1050px] text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    {['Domain', 'Category', 'Title', 'Difficulty', 'Questions', 'Attempts', 'Status', 'Actions'].map((h) => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
+                <thead className="bg-gray-50 border-b"><tr>
+                  {['Domain', 'Category', 'Title', 'Difficulty', 'Questions', 'Attempts', 'Status', 'Actions'].map((h) => <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>)}
+                </tr></thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredQuizzes.map((q) => (
                     <tr key={q.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs font-medium whitespace-nowrap">
-                          {q.resolved_domain_name}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {q.category_name || q.resolved_category?.name || '—'}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-gray-900 max-w-xs">
-                        <div className="truncate" title={q.title}>{q.title}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={difficultyColor(q.difficulty)}>{q.difficulty}</Badge>
-                      </td>
+                      <td className="px-4 py-3"><span className="inline-flex rounded-full bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs font-medium whitespace-nowrap">{q.resolved_domain_name}</span></td>
+                      <td className="px-4 py-3 text-gray-500">{q.category_name || q.resolved_category?.name || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-gray-900 max-w-xs"><div className="truncate" title={q.title}>{q.title}</div></td>
+                      <td className="px-4 py-3"><Badge className={difficultyColor(q.difficulty)}>{q.difficulty}</Badge></td>
                       <td className="px-4 py-3 text-gray-600">{q.question_count}</td>
                       <td className="px-4 py-3 text-gray-600">{q.attempt_count}</td>
-                      <td className="px-4 py-3">
-                        <Badge className={statusColor(q.status)}>{q.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2 min-w-[230px]">
-                          <Link
-                            to={`/admin/quizzes/${q.id}`}
-                            className="rounded-lg px-2.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                          >
-                            Manage
-                          </Link>
-                          <Link
-                            to={`/admin/quizzes/${q.id}/edit`}
-                            className="rounded-lg px-2.5 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={() => handleToggleStatus(q)}
-                            className={`rounded-lg px-2.5 py-1.5 text-xs ${
-                              q.status === 'published'
-                                ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                                : 'bg-green-50 text-green-700 hover:bg-green-100'
-                            }`}
-                          >
-                            {q.status === 'published' ? 'Unpublish' : 'Publish'}
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(q)}
-                            className="rounded-lg px-2.5 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+                      <td className="px-4 py-3"><Badge className={statusColor(q.status)}>{q.status}</Badge></td>
+                      <td className="px-4 py-3"><div className="flex flex-wrap gap-2 min-w-[230px]">
+                        <Link to={`/admin/quizzes/${q.id}`} className="rounded-lg px-2.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Manage</Link>
+                        <Link to={`/admin/quizzes/${q.id}/edit`} className="rounded-lg px-2.5 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">Edit</Link>
+                        <button onClick={() => handleToggleStatus(q)} className={`rounded-lg px-2.5 py-1.5 text-xs ${q.status === 'published' ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>{q.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+                        <button onClick={() => setDeleteTarget(q)} className="rounded-lg px-2.5 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100">Delete</button>
+                      </div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -297,15 +146,7 @@ export default function QuizManagement() {
           )}
         </div>
       </div>
-
-      <ConfirmModal
-        isOpen={!!deleteTarget}
-        title="Delete Quiz"
-        message={`Delete "${deleteTarget?.title}"? This will remove all questions and attempts.`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-        confirmText="Delete"
-      />
+      <ConfirmModal isOpen={!!deleteTarget} title="Delete Quiz" message={`Delete "${deleteTarget?.title}"? This will remove all questions and attempts.`} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} confirmText="Delete" />
     </AdminLayout>
   );
 }
