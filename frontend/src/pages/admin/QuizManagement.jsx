@@ -24,7 +24,12 @@ export default function QuizManagement() {
     setLoading(true);
     try {
       const [quizResponse, categoryResponse, domainResponse] = await Promise.all([
-        getQuizzes({ search, status: statusFilter || undefined }),
+        getQuizzes({
+          search: search || undefined,
+          status: statusFilter || undefined,
+          domain_id: domainFilter === 'all' ? undefined : domainFilter,
+          category: categoryFilter === 'all' ? undefined : categoryFilter,
+        }),
         getCategories(),
         getDomains(),
       ]);
@@ -38,12 +43,7 @@ export default function QuizManagement() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [search, statusFilter]);
-
-  const categoryLookup = useMemo(
-    () => Object.fromEntries(categories.map((c) => [String(c.id), c])),
-    [categories]
-  );
+  useEffect(() => { fetchData(); }, [search, statusFilter, domainFilter, categoryFilter]);
 
   const visibleCategories = useMemo(() => (
     domainFilter === 'all'
@@ -51,25 +51,19 @@ export default function QuizManagement() {
       : categories.filter((c) => String(c.domain_id) === String(domainFilter))
   ), [categories, domainFilter]);
 
-  const filteredQuizzes = useMemo(() => quizzes.map((q) => {
-    const category = categoryLookup[String(q.category_id)];
-    return {
+  const filteredQuizzes = useMemo(() => quizzes
+    .map((q) => ({
       ...q,
-      resolved_category: category,
-      resolved_domain_id: q.domain_id ?? category?.domain_id ?? null,
-      resolved_domain_name: q.domain_name ?? category?.domain_name ?? 'Unknown',
-    };
-  }).filter((q) => {
-    const domainOk = domainFilter === 'all' || String(q.resolved_domain_id) === String(domainFilter);
-    const categoryOk = categoryFilter === 'all' || String(q.category_id) === String(categoryFilter);
-    return domainOk && categoryOk;
-  }).sort((a, b) => {
-    const domainCompare = (a.resolved_domain_name || '').localeCompare(b.resolved_domain_name || '');
-    if (domainCompare !== 0) return domainCompare;
-    const categoryCompare = (a.category_name || '').localeCompare(b.category_name || '');
-    if (categoryCompare !== 0) return categoryCompare;
-    return (a.title || '').localeCompare(b.title || '');
-  }), [quizzes, categoryLookup, domainFilter, categoryFilter]);
+      resolved_domain_id: q.domain_id ?? q.resolved_domain_id ?? null,
+      resolved_domain_name: q.domain_name ?? q.resolved_domain_name ?? 'Unknown',
+    }))
+    .sort((a, b) => {
+      const domainCompare = (a.resolved_domain_name || '').localeCompare(b.resolved_domain_name || '');
+      if (domainCompare !== 0) return domainCompare;
+      const categoryCompare = (a.category_name || '').localeCompare(b.category_name || '');
+      if (categoryCompare !== 0) return categoryCompare;
+      return (a.title || '').localeCompare(b.title || '');
+    }), [quizzes]);
 
   const handleToggleStatus = async (quiz) => {
     const newStatus = quiz.status === 'published' ? 'unpublished' : 'published';
@@ -102,9 +96,7 @@ export default function QuizManagement() {
             </select>
             <select className="input w-full" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
               <option value="all">All categories</option>
-              {visibleCategories.slice().sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {visibleCategories.slice().sort((a, b) => a.name.localeCompare(b.name)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select className="input w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
@@ -126,18 +118,13 @@ export default function QuizManagement() {
                   {filteredQuizzes.map((q) => (
                     <tr key={q.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3"><span className="inline-flex rounded-full bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs font-medium whitespace-nowrap">{q.resolved_domain_name}</span></td>
-                      <td className="px-4 py-3 text-gray-500">{q.category_name || q.resolved_category?.name || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{q.category_name || '—'}</td>
                       <td className="px-4 py-3 font-medium text-gray-900 max-w-xs"><div className="truncate" title={q.title}>{q.title}</div></td>
                       <td className="px-4 py-3"><Badge className={difficultyColor(q.difficulty)}>{q.difficulty}</Badge></td>
                       <td className="px-4 py-3 text-gray-600">{q.question_count}</td>
                       <td className="px-4 py-3 text-gray-600">{q.attempt_count}</td>
                       <td className="px-4 py-3"><Badge className={statusColor(q.status)}>{q.status}</Badge></td>
-                      <td className="px-4 py-3"><div className="flex flex-wrap gap-2 min-w-[230px]">
-                        <Link to={`/admin/quizzes/${q.id}`} className="rounded-lg px-2.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Manage</Link>
-                        <Link to={`/admin/quizzes/${q.id}/edit`} className="rounded-lg px-2.5 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">Edit</Link>
-                        <button onClick={() => handleToggleStatus(q)} className={`rounded-lg px-2.5 py-1.5 text-xs ${q.status === 'published' ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>{q.status === 'published' ? 'Unpublish' : 'Publish'}</button>
-                        <button onClick={() => setDeleteTarget(q)} className="rounded-lg px-2.5 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100">Delete</button>
-                      </div></td>
+                      <td className="px-4 py-3"><div className="flex flex-wrap gap-2 min-w-[230px]"><Link to={`/admin/quizzes/${q.id}`} className="rounded-lg px-2.5 py-1.5 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100">Manage</Link><Link to={`/admin/quizzes/${q.id}/edit`} className="rounded-lg px-2.5 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200">Edit</Link><button onClick={() => handleToggleStatus(q)} className={`rounded-lg px-2.5 py-1.5 text-xs ${q.status === 'published' ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>{q.status === 'published' ? 'Unpublish' : 'Publish'}</button><button onClick={() => setDeleteTarget(q)} className="rounded-lg px-2.5 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100">Delete</button></div></td>
                     </tr>
                   ))}
                 </tbody>
