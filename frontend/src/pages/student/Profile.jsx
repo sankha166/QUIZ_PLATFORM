@@ -221,10 +221,6 @@ export default function Profile() {
                 </div>
               </div>
               <div className="flex items-center justify-between w-full pb-1">
-                <div>
-                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                <p className="text-xs text-slate-500">{user?.email}</p>
-                </div>
                 <div className='flex item-centre gap-3'>
                 <Badge className="bg-indigo-100 px-3 py-1 text-sm text-indigo-700">{user?.role || 'Student'}</Badge>
                 <span className="text-xs text-slate-400">
