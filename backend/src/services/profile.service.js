@@ -39,16 +39,17 @@ const updateProfile = async (userId, { name, bio, avatar_url, preferred_domain_i
      RETURNING id, name, email, role, status, avatar_url, bio, preferred_domain_id, updated_at`,
     [name || null, bio || null, avatar_url || null, domainId, userId]
   );
-  return result.rows[0];
+  const profile = result.rows[0];
+  if (!profile) { const e = new Error('User not found'); e.status = 404; throw e; }
+  const domain = profile.preferred_domain_id ? await query('SELECT name FROM domains WHERE id=$1', [profile.preferred_domain_id]) : { rows: [] };
+  return { ...profile, preferred_domain_name: domain.rows[0]?.name || null };
 };
 
 const changePassword = async (userId, { currentPassword, newPassword }) => {
   const result = await query('SELECT password FROM users WHERE id = $1', [userId]);
   if (!result.rows.length) { const e = new Error('User not found'); e.status = 404; throw e; }
-
   const valid = await bcrypt.compare(currentPassword, result.rows[0].password);
   if (!valid) { const e = new Error('Current password is incorrect'); e.status = 400; throw e; }
-
   const hashed = await bcrypt.hash(newPassword, 10);
   await query('UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2', [hashed, userId]);
   return { message: 'Password changed successfully' };
