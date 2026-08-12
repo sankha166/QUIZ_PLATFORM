@@ -11,9 +11,9 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
-    // Fetch fresh user from DB to check status
+    // Fetch the current user, including the profile fields needed by the UI.
     const result = await query(
-      'SELECT id, name, email, role, status FROM users WHERE id = $1',
+      'SELECT id, name, email, role, status, avatar_url, bio, preferred_domain_id FROM users WHERE id = $1',
       [decoded.userId]
     );
 
