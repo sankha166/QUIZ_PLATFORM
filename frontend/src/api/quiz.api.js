@@ -1,6 +1,49 @@
 import api from './axios';
-export const getQuizzes=(params)=>api.get('/quizzes',{params,skipAuthRedirect:true});export const getQuizById=(id)=>api.get(`/quizzes/${id}`);export const createQuiz=(data)=>api.post('/quizzes',data);export const updateQuiz=(id,data)=>api.put(`/quizzes/${id}`,data);export const deleteQuiz=(id)=>api.delete(`/quizzes/${id}`);export const updateQuizStatus=(id,status)=>api.patch(`/quizzes/${id}/publish`,{status});
-export const getQuestions=(quizId)=>api.get(`/quizzes/${quizId}/questions`);export const addQuestion=(quizId,data)=>api.post(`/quizzes/${quizId}/questions`,data);export const updateQuestion=(id,data)=>api.put(`/questions/${id}`,data);export const deleteQuestion=(id)=>api.delete(`/questions/${id}`);
-export const getCategories=async(params)=>{const [cats,doms]=await Promise.all([api.get('/categories',{params}),api.get('/domains')]);const domains=doms.data.domains||[];try{localStorage.setItem('quiz_platform_admin_domains_v1',JSON.stringify(domains.map(d=>({...d,id:String(d.id),slug:String(d.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}))));}catch{}const slugById=new Map(domains.map(d=>[String(d.id),String(d.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')]));const categories=(cats.data.categories||[]).map(c=>({...c,domain_id:slugById.get(String(c.domain_id))||String(c.domain_id)}));return {...cats,data:{...cats.data,categories}};};
-export const createCategory=async(data)=>{let payload={...data};if(!Number.isInteger(Number(payload.domain_id))){const r=await api.get('/domains');let d=(r.data.domains||[]).find(x=>String(x.id)===String(payload.domain_id)||String(x.name).toLowerCase()===String(payload.domain_name||'').toLowerCase()||String(x.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')===String(payload.domain_id).toLowerCase());if(!d){const created=await api.post('/domains',{name:payload.domain_name||String(payload.domain_id),description:''});d=created.data.domain;}payload.domain_id=d.id;}return api.post('/categories',payload);};
-export const updateCategory=async(id,data)=>{let payload={...data};if(!Number.isInteger(Number(payload.domain_id))){const r=await api.get('/domains');const d=(r.data.domains||[]).find(x=>String(x.id)===String(payload.domain_id)||String(x.name).toLowerCase()===String(payload.domain_name||'').toLowerCase()||String(x.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')===String(payload.domain_id).toLowerCase());if(!d)throw new Error('Selected domain was not found');payload.domain_id=d.id;}return api.put(`/categories/${id}`,payload);};export const deleteCategory=(id)=>api.delete(`/categories/${id}`);
+
+export const getQuizzes = (params) => api.get('/quizzes', { params, skipAuthRedirect: true });
+export const getQuizById = (id) => api.get(`/quizzes/${id}`);
+export const createQuiz = (data) => api.post('/quizzes', data);
+export const updateQuiz = (id, data) => api.put(`/quizzes/${id}`, data);
+export const deleteQuiz = (id) => api.delete(`/quizzes/${id}`);
+export const updateQuizStatus = (id, status) => api.patch(`/quizzes/${id}/publish`, { status });
+
+export const getQuestions = (quizId) => api.get(`/quizzes/${quizId}/questions`);
+export const addQuestion = (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data);
+export const updateQuestion = (id, data) => api.put(`/questions/${id}`, data);
+export const deleteQuestion = (id) => api.delete(`/questions/${id}`);
+
+// IMPORTANT: domain_id must stay as the database numeric ID.
+// Converting it to a slug here breaks Domain -> Category filtering and quiz matching.
+export const getCategories = (params) => api.get('/categories', { params });
+
+export const createCategory = async (data) => {
+  const payload = { ...data };
+  if (!Number.isInteger(Number(payload.domain_id))) {
+    const response = await api.get('/domains');
+    const domain = (response.data.domains || []).find(
+      (d) =>
+        String(d.id) === String(payload.domain_id) ||
+        String(d.name).toLowerCase() === String(payload.domain_name || '').toLowerCase()
+    );
+    if (!domain) throw new Error('Selected domain was not found');
+    payload.domain_id = domain.id;
+  }
+  return api.post('/categories', payload);
+};
+
+export const updateCategory = async (id, data) => {
+  const payload = { ...data };
+  if (!Number.isInteger(Number(payload.domain_id))) {
+    const response = await api.get('/domains');
+    const domain = (response.data.domains || []).find(
+      (d) =>
+        String(d.id) === String(payload.domain_id) ||
+        String(d.name).toLowerCase() === String(payload.domain_name || '').toLowerCase()
+    );
+    if (!domain) throw new Error('Selected domain was not found');
+    payload.domain_id = domain.id;
+  }
+  return api.put(`/categories/${id}`, payload);
+};
+
+export const deleteCategory = (id) => api.delete(`/categories/${id}`);
