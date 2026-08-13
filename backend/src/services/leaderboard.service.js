@@ -23,7 +23,7 @@ const getLeaderboard = async ({ type = 'overall', categoryId, period = 'all', do
   }
 
   const sql = `
-    SELECT u.id, u.name,
+    SELECT u.id, u.name, u.avatar_url, u.bio,
            COUNT(a.id)::int AS quizzes_completed,
            COALESCE(AVG(a.percentage),0)::numeric(5,2) AS average_score,
            COALESCE(MAX(a.percentage),0)::numeric(5,2) AS highest_score
@@ -33,7 +33,7 @@ const getLeaderboard = async ({ type = 'overall', categoryId, period = 'all', do
     ${domainJoin}
     WHERE u.role = 'STUDENT' AND u.status = 'active'
       ${categoryWhere} ${domainWhere}
-    GROUP BY u.id
+    GROUP BY u.id, u.name, u.avatar_url, u.bio
     HAVING COUNT(a.id) > 0
     ORDER BY average_score DESC, quizzes_completed DESC
     LIMIT 50`;
