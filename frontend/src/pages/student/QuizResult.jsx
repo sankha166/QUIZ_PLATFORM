@@ -118,7 +118,7 @@ export default function QuizResult() {
             to="/student/attempts"
             className="btn-primary inline-block mt-5"
           >
-            ← Back to My Attempts
+            ← Back
           </Link>
         </div>
       </StudentLayout>
@@ -129,7 +129,7 @@ export default function QuizResult() {
       <div className="relative max-w-5xl mx-auto space-y-6 min-w-0">
         <div className="flex items-center justify-between gap-3">
           <Link to="/student/attempts" className="btn-secondary">
-            ← Back to My Attempts
+            ← Back
           </Link>
           <Link
             to="/student/quizzes"

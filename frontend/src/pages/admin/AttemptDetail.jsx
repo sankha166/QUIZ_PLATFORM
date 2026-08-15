@@ -26,7 +26,7 @@ export default function AttemptDetail() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link to="/admin/attempts" className="text-sm text-slate-500 hover:text-slate-700">← Back to attempts</Link>
+            <Link to="/admin/attempts" className="text-sm text-slate-500 hover:text-slate-700">← Back</Link>
             <h2 className="mt-3 text-3xl font-bold text-slate-900">Attempt detail</h2>
             <p className="text-sm text-slate-500 mt-1">A complete breakdown of this student's quiz attempt.</p>
           </div>
