@@ -24,28 +24,30 @@ const getById = async (id, role) => {
 };
 
 const scoreValue = (value, fallback) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
+const timeValue = (value, fallback = 30) => Math.min(600, Math.max(5, Number(value) || fallback));
 
-const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong }) => {
+const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds }) => {
   const live = Boolean(is_live_quiz);
   const catId = category_id ? parseInt(category_id, 10) : null;
   if (live && !live_start_at) { const e = new Error('Live quiz requires a start time'); e.status = 400; throw e; }
   if (live && !live_all_domains && !catId) { const e = new Error('Select a category or choose All Domains'); e.status = 400; throw e; }
   const safeDuration = live ? 1 : Number(duration) || 10;
-  const result = await query(`INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, status, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, $10, NULL, $11, $12, $13, $14, $15, $16) RETURNING *`, [title, description || null, Number.isNaN(catId) ? null : catId, difficulty, safeDuration, passing_score || 60, max_attempts || 1, thumbnail_url || null, live, live_start_at || null, Boolean(live_all_domains), scoreValue(live_score_025, 2), scoreValue(live_score_050, 1.5), scoreValue(live_score_075, 1.25), scoreValue(live_score_100, 1), scoreValue(live_score_wrong, -0.5)]);
+  const result = await query(`INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, status, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, $10, NULL, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`, [title, description || null, Number.isNaN(catId) ? null : catId, difficulty, safeDuration, passing_score || 60, max_attempts || 1, thumbnail_url || null, live, live_start_at || null, Boolean(live_all_domains), scoreValue(live_score_025, 2), scoreValue(live_score_050, 1.5), scoreValue(live_score_075, 1.25), scoreValue(live_score_100, 1), scoreValue(live_score_wrong, -0.5), live && Boolean(live_same_question_time), timeValue(live_question_time_seconds)]);
   return result.rows[0];
 };
 
 const update = async (id, fields) => {
   const current = await query('SELECT is_live_quiz FROM quizzes WHERE id = $1', [id]);
   if (!current.rows.length) { const e = new Error('Quiz not found'); e.status = 404; throw e; }
-  const allowed = ['title','description','category_id','difficulty','duration','passing_score','max_attempts','thumbnail_url','is_live_quiz','live_start_at','live_end_at','live_all_domains','live_score_025','live_score_050','live_score_075','live_score_100','live_score_wrong'];
+  const allowed = ['title','description','category_id','difficulty','duration','passing_score','max_attempts','thumbnail_url','is_live_quiz','live_start_at','live_end_at','live_all_domains','live_score_025','live_score_050','live_score_075','live_score_100','live_score_wrong','live_same_question_time','live_question_time_seconds'];
   const updates = []; const params = []; let idx = 1;
   for (const key of allowed) {
     if (fields[key] === undefined) continue;
     let val = fields[key];
     if (key === 'category_id') { val = val ? parseInt(val, 10) : null; if (Number.isNaN(val)) val = null; }
-    if (key === 'is_live_quiz' || key === 'live_all_domains') val = Boolean(val);
+    if (key === 'is_live_quiz' || key === 'live_all_domains' || key === 'live_same_question_time') val = Boolean(val);
     if (key.startsWith('live_score_')) val = scoreValue(val, 0);
+    if (key === 'live_question_time_seconds') val = timeValue(val);
     if (key === 'live_end_at' && current.rows[0].is_live_quiz) val = null;
     updates.push(`${key} = $${idx}`); params.push(val); idx++;
   }
