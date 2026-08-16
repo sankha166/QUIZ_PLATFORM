@@ -45,10 +45,9 @@
     font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1;
     text-wrap: balance;
   }
-  h1 { font-weight: 600; letter-spacing: -0.028em; line-height: 1.2; }
-  h2 { font-weight: 600; letter-spacing: -0.022em; line-height: 1.28; }
-  h3 { font-weight: 550; letter-spacing: -0.016em; line-height: 1.32; }
-  h4, h5, h6 { font-weight: 550; }
+  h1 { font-weight: 550; letter-spacing: -0.028em; line-height: 1.2; }
+  h2 { font-weight: 550; letter-spacing: -0.022em; line-height: 1.28; }
+  h3, h4, h5, h6 { font-weight: 500; letter-spacing: -0.012em; line-height: 1.32; }
   p { text-wrap: pretty; }
   small { font-size: .8125rem; }
 }
@@ -63,7 +62,7 @@
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .btn:active:not(:disabled) { transform: translateY(0); }
   .btn-primary { @apply btn text-white shadow-sm; background: var(--brand); }
-  .btn-primary:hover:not(:disabled) { background: #4338ca; box-shadow: 0 5px 14px rgba(79,70,229,.12); }
+  .btn-primary:hover:not(:disabled) { background: #4338ca; box-shadow: 0 5px 14px rgba(79,70,237,.12); }
   .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300; }
   .btn-success { @apply btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700; }
   .btn-danger { @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700; }
@@ -72,9 +71,9 @@
   .label { @apply mb-1.5 block text-sm text-slate-700; font-weight: 500; }
   .card { @apply rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200; box-shadow: var(--shadow-card); }
   .card:hover { box-shadow: var(--shadow-card-hover); }
-  .page-title { @apply text-2xl tracking-tight text-slate-900 sm:text-3xl; font-weight: 600; }
+  .page-title { @apply text-2xl tracking-tight text-slate-900 sm:text-3xl; font-weight: 550; }
   .page-subtitle { @apply mt-1 text-sm leading-6 text-slate-500; }
-  .section-title { @apply text-base text-slate-900 sm:text-lg; font-weight: 550; }
+  .section-title { @apply text-base text-slate-900 sm:text-lg; font-weight: 500; }
   .section-subtitle { @apply mt-0.5 text-sm text-slate-500; }
   .stat-card { @apply rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5; box-shadow: var(--shadow-card); }
   .glass-header { @apply border-b border-slate-200/80 bg-white/95 backdrop-blur-xl; }
@@ -89,10 +88,10 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
-  /* Keep utility emphasis restrained across the existing UI. */
+  /* Global restraint: existing utility classes should not create unnecessary heavy text. */
   .font-black { font-weight: 600 !important; }
-  .font-extrabold { font-weight: 600 !important; }
-  .font-bold { font-weight: 550 !important; }
+  .font-extrabold { font-weight: 550 !important; }
+  .font-bold { font-weight: 500 !important; }
   .font-semibold { font-weight: 500 !important; }
   .shadow-2xl { box-shadow: 0 14px 34px rgba(15,23,42,.10) !important; }
   .shadow-xl { box-shadow: 0 10px 26px rgba(15,23,42,.075) !important; }
