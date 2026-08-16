@@ -1,3 +1,154 @@
-import { useEffect, useRef, useState } from 'react';import { Link, useLocation, useNavigate } from 'react-router-dom';import { useAuth } from '../../hooks/useAuth';import NotificationBell from '../common/NotificationBell';import PreferredDomainSelector from './PreferredDomainSelector';import { useTheme } from '../../context/ThemeContext';
-const navItems=[{path:'/student/dashboard',label:'Dashboard'},{path:'/student/attempts',label:'My Attempts'},{path:'/student/leaderboard',label:'Leaderboard'}];
-export default function StudentLayout({children}){const{user,logout}=useAuth();const{theme,toggleTheme}=useTheme();const location=useLocation();const navigate=useNavigate();const[mobileOpen,setMobileOpen]=useState(false),[profileOpen,setProfileOpen]=useState(false),[quizOpen,setQuizOpen]=useState(false);const profileRef=useRef(null),quizRef=useRef(null);useEffect(()=>{const close=e=>{if(profileRef.current&&!profileRef.current.contains(e.target))setProfileOpen(false);if(quizRef.current&&!quizRef.current.contains(e.target))setQuizOpen(false)};document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close)},[]);useEffect(()=>{setMobileOpen(false);setProfileOpen(false);setQuizOpen(false)},[location.pathname]);const handleLogout=()=>{setMobileOpen(false);setProfileOpen(false);logout();navigate('/login')};const isActive=p=>location.pathname===p||location.pathname.startsWith(`${p}/`);const isQuiz=isActive('/student/quizzes')||isActive('/student/live-quizzes');return <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100"><nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95"><div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8"><div className="flex min-h-[72px] items-center gap-2 sm:gap-4"><button type="button" onClick={()=>setMobileOpen(o=>!o)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 md:hidden">☰</button><Link to="/student/dashboard" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3"><img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-xl object-cover sm:h-10 sm:w-10"/><div className="hidden min-w-0 sm:block"><p className="truncate text-sm font-semibold">Quizora</p><p className="text-xs text-slate-500 dark:text-slate-400">Student Portal</p></div></Link><div className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex lg:gap-2"><Link to="/student/dashboard" className={`whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium lg:px-4 ${isActive('/student/dashboard')?'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300':'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}>Dashboard</Link><div className="relative" ref={quizRef}><button onClick={()=>setQuizOpen(o=>!o)} className={`rounded-xl px-3 py-2.5 text-sm font-medium lg:px-4 ${isQuiz?'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300':'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}>Quizzes ▾</button>{quizOpen&&<div className="absolute left-0 top-full mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900"><Link to="/student/quizzes" className="block rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800">📚 All Quizzes</Link><Link to="/student/live-quizzes" className="block rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800">🔴 Live Quizzes</Link></div>}</div>{navItems.slice(1).map(item=><Link key={item.path} to={item.path} className={`whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium lg:px-4 ${isActive(item.path)?'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300':'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}>{item.label}</Link>)}</div><div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2"><NotificationBell/><button type="button" onClick={toggleTheme} className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">{theme==='dark'?'☀️':'🌙'}</button><div className="relative" ref={profileRef}><button type="button" onClick={()=>setProfileOpen(o=>!o)} className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-11 sm:w-11">{user?.avatar_url?<img src={user.avatar_url} alt={user?.name||'Profile'} className="h-full w-full object-cover"/>:<span className="text-sm font-semibold">{user?.name?.charAt(0)?.toUpperCase()||'S'}</span>}</button>{profileOpen&&<div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900"><div className="border-b border-slate-100 px-3 pb-3 dark:border-slate-800"><p className="truncate text-sm font-semibold">{user?.name}</p><p className="truncate text-xs text-slate-500">{user?.email}</p></div><Link to="/student/profile" className="mt-2 block rounded-xl px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Update profile</Link><button onClick={handleLogout} className="mt-1 w-full rounded-xl bg-slate-900 px-3 py-2.5 text-left text-sm font-semibold text-white dark:bg-white dark:text-slate-900">Logout</button></div>}</div></div></div></div>{mobileOpen&&<div className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:hidden"><div className="space-y-1 px-3 py-3"><Link to="/student/dashboard" className="block rounded-xl px-4 py-3 text-sm font-semibold">Dashboard</Link><Link to="/student/quizzes" className="block rounded-xl px-4 py-3 text-sm font-semibold">📚 All Quizzes</Link><Link to="/student/live-quizzes" className="block rounded-xl px-4 py-3 text-sm font-semibold">🔴 Live Quizzes</Link><Link to="/student/attempts" className="block rounded-xl px-4 py-3 text-sm font-semibold">My Attempts</Link><Link to="/student/leaderboard" className="block rounded-xl px-4 py-3 text-sm font-semibold">Leaderboard</Link><Link to="/student/profile" className="block rounded-xl px-4 py-3 text-sm font-semibold">My Profile</Link></div></div>}</nav><main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">{location.pathname.startsWith('/student/profile')&&<div className="mb-5"><PreferredDomainSelector/></div>}{children}</main></div>}
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, ChevronDown, LogOut, Menu, Moon, Sun, UserRound, X } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import NotificationBell from '../common/NotificationBell';
+import PreferredDomainSelector from './PreferredDomainSelector';
+import { useTheme } from '../../context/ThemeContext';
+
+const navItems = [
+  { path: '/student/dashboard', label: 'Dashboard' },
+  { path: '/student/attempts', label: 'My Attempts' },
+  { path: '/student/leaderboard', label: 'Leaderboard' },
+];
+
+const NavLink = ({ to, active, children, onClick }) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`inline-flex items-center rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+      active
+        ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+    }`}
+  >
+    {children}
+  </Link>
+);
+
+export default function StudentLayout({ children }) {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const profileRef = useRef(null);
+  const quizRef = useRef(null);
+
+  useEffect(() => {
+    const close = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) setProfileOpen(false);
+      if (quizRef.current && !quizRef.current.contains(event.target)) setQuizOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+    setQuizOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isQuiz = isActive('/student/quizzes') || isActive('/student/live-quizzes');
+  const logoutUser = () => { setMobileOpen(false); logout(); navigate('/login'); };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="glass-header sticky top-0 z-50">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:h-[68px] sm:px-6 lg:px-8">
+          <button type="button" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMobileOpen(v => !v)} className="btn-icon lg:hidden">
+            {mobileOpen ? <X size={18} strokeWidth={1.8} /> : <Menu size={18} strokeWidth={1.8} />}
+          </button>
+
+          <Link to="/student/dashboard" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-[10px] object-cover sm:h-10 sm:w-10" />
+            <div className="hidden min-w-0 sm:block">
+              <div className="truncate text-[15px] font-semibold tracking-[-0.015em]">Quizora</div>
+              <div className="text-[11px] font-medium text-slate-400">Student Portal</div>
+            </div>
+          </Link>
+
+          <nav className="ml-5 hidden flex-1 items-center gap-0.5 lg:flex">
+            <NavLink to="/student/dashboard" active={isActive('/student/dashboard')}>Dashboard</NavLink>
+            <div ref={quizRef} className="relative">
+              <button type="button" onClick={() => setQuizOpen(v => !v)} className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${isQuiz ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`}>
+                Quizzes <ChevronDown size={14} strokeWidth={1.8} className={`transition-transform ${quizOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {quizOpen && (
+                <div className="absolute left-0 top-full mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,.10)] dark:border-slate-700 dark:bg-slate-900">
+                  <NavLink to="/student/quizzes" active={isActive('/student/quizzes')}>All Quizzes</NavLink>
+                  <NavLink to="/student/live-quizzes" active={isActive('/student/live-quizzes')}>
+                    <span className="mr-2 h-1.5 w-1.5 rounded-full bg-rose-500" /> Live Quizzes
+                  </NavLink>
+                </div>
+              )}
+            </div>
+            {navItems.slice(1).map(item => <NavLink key={item.path} to={item.path} active={isActive(item.path)}>{item.label}</NavLink>)}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+            <NotificationBell />
+            <button type="button" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggleTheme} className="btn-icon border-transparent bg-transparent shadow-none hover:bg-slate-100 dark:hover:bg-slate-800">
+              {theme === 'dark' ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
+            </button>
+            <div ref={profileRef} className="relative">
+              <button type="button" aria-label="Open profile menu" onClick={() => setProfileOpen(v => !v)} className="h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 sm:h-10 sm:w-10">
+                {user?.avatar_url ? <img src={user.avatar_url} alt="Profile" className="h-full w-full object-cover" /> : <span className="text-sm font-semibold text-slate-600 dark:text-slate-200">{user?.name?.charAt(0)?.toUpperCase() || 'S'}</span>}
+              </button>
+              {profileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-slate-200 bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,.10)] dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-3 dark:bg-slate-800">
+                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                      {user?.avatar_url ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" /> : <UserRound className="m-auto mt-2 text-slate-500" size={18} />}
+                    </div>
+                    <div className="min-w-0"><p className="truncate text-[13px] font-semibold">{user?.name}</p><p className="truncate text-xs text-slate-500">{user?.email}</p></div>
+                  </div>
+                  <Link to="/student/profile" className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"><UserRound size={16} strokeWidth={1.8} /> My Profile</Link>
+                  <button type="button" onClick={logoutUser} className="mt-0.5 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"><LogOut size={16} strokeWidth={1.8} /> Logout</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-slate-950/25 backdrop-blur-[1px]" />
+          <aside className="absolute left-0 top-0 h-full w-[min(86vw,340px)] border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex h-16 items-center justify-between border-b border-slate-100 px-4 dark:border-slate-800">
+              <Link to="/student/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-2.5"><img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-[10px]" /><span className="text-[15px] font-semibold">Quizora</span></Link>
+              <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="btn-icon"><X size={18} strokeWidth={1.8} /></button>
+            </div>
+            <nav className="space-y-1 p-3">
+              <NavLink to="/student/dashboard" active={isActive('/student/dashboard')} onClick={() => setMobileOpen(false)}>Dashboard</NavLink>
+              <NavLink to="/student/quizzes" active={isActive('/student/quizzes')} onClick={() => setMobileOpen(false)}>All Quizzes</NavLink>
+              <NavLink to="/student/live-quizzes" active={isActive('/student/live-quizzes')} onClick={() => setMobileOpen(false)}><span className="mr-2 h-1.5 w-1.5 rounded-full bg-rose-500" /> Live Quizzes</NavLink>
+              <NavLink to="/student/attempts" active={isActive('/student/attempts')} onClick={() => setMobileOpen(false)}>My Attempts</NavLink>
+              <NavLink to="/student/leaderboard" active={isActive('/student/leaderboard')} onClick={() => setMobileOpen(false)}>Leaderboard</NavLink>
+              <NavLink to="/student/profile" active={isActive('/student/profile')} onClick={() => setMobileOpen(false)}>My Profile</NavLink>
+            </nav>
+            <div className="absolute bottom-0 left-0 right-0 border-t border-slate-100 p-3 dark:border-slate-800">
+              <div className="mb-2 flex items-center gap-2 px-2 py-2"><Bell size={15} className="text-slate-400" /><span className="truncate text-xs font-medium text-slate-500">{user?.name}</span></div>
+              <button type="button" onClick={logoutUser} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2.5 text-left text-[13px] font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"><LogOut size={16} /> Logout</button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+        {location.pathname.startsWith('/student/profile') && <div className="mb-5"><PreferredDomainSelector /></div>}
+        {children}
+      </main>
+    </div>
+  );
+}
