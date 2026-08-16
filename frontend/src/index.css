@@ -11,54 +11,29 @@
   --text-secondary: #5f6b7a;
   --text-muted: #8a94a3;
   --border-soft: #e7eaf0;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
   --shadow-card: 0 2px 8px rgba(15, 23, 42, .045), 0 1px 2px rgba(15, 23, 42, .035);
   --shadow-card-hover: 0 10px 28px rgba(15, 23, 42, .07);
 }
 
 @layer base {
   * { box-sizing: border-box; }
-  html {
-    scroll-behavior: smooth;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    font-synthesis: none;
-  }
-  body {
-    @apply bg-slate-50 text-slate-900 font-sans;
-    margin: 0;
-    min-width: 320px;
-    line-height: 1.55;
-    font-size: 15px;
-    font-weight: 400;
-    letter-spacing: -0.005em;
-    font-variant-numeric: tabular-nums;
-  }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-synthesis: none; }
+  body { @apply bg-slate-50 text-slate-900 font-sans; margin: 0; min-width: 320px; line-height: 1.55; font-size: 15px; font-weight: 400; letter-spacing: -0.005em; font-variant-numeric: tabular-nums; }
   button, input, textarea, select { font: inherit; }
   button { -webkit-tap-highlight-color: transparent; }
   a { color: inherit; text-decoration: none; }
   ::selection { @apply bg-brand-200 text-brand-900; }
   :focus-visible { outline: 3px solid rgba(79,70,229,.18); outline-offset: 2px; }
-
-  h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary);
-    font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1;
-    text-wrap: balance;
-  }
+  h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1; text-wrap: balance; }
   h1 { font-weight: 700; letter-spacing: -0.032em; line-height: 1.18; }
-  h2 { font-weight: 650; letter-spacing: -0.024em; line-height: 1.25; }
+  h2 { font-weight: 600; letter-spacing: -0.024em; line-height: 1.25; }
   h3 { font-weight: 600; letter-spacing: -0.018em; line-height: 1.3; }
   p { text-wrap: pretty; }
   small { font-size: .8125rem; }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200;
-    min-height: 42px;
-    letter-spacing: -0.008em;
-  }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200; min-height: 42px; letter-spacing: -0.008em; }
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .btn:active:not(:disabled) { transform: translateY(0); }
   .btn-primary { @apply btn text-white shadow-sm; background: var(--brand); }
@@ -67,11 +42,7 @@
   .btn-success { @apply btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700; }
   .btn-danger { @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700; }
   .btn-icon { @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900; }
-
-  .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10;
-    letter-spacing: -0.006em;
-  }
+  .input { @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10; letter-spacing: -0.006em; }
   .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
   .card { @apply rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200; box-shadow: var(--shadow-card); }
   .card:hover { box-shadow: var(--shadow-card-hover); }
@@ -91,16 +62,17 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
-
-  /* Normalize legacy pages that used overly heavy typography. */
   .font-black { font-weight: 700 !important; }
   .font-extrabold { font-weight: 700 !important; }
   .font-bold { font-weight: 600 !important; }
-
-  /* A restrained surface language across older screens. */
   .shadow-2xl { box-shadow: 0 18px 45px rgba(15,23,42,.12) !important; }
   .shadow-xl { box-shadow: 0 12px 32px rgba(15,23,42,.09) !important; }
   .shadow-lg { box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
+  /* Keep legacy cards and controls visually related instead of mixing 8/16/24px radii. */
+  .rounded-3xl { border-radius: 1.25rem !important; }
+  .rounded-2xl { border-radius: 1rem !important; }
+  .rounded-xl { border-radius: .75rem !important; }
+  .rounded-lg { border-radius: .625rem !important; }
 }
 
 @layer base {
