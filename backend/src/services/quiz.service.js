@@ -26,21 +26,22 @@ const getById = async (id, role) => {
 const scoreValue = (value, fallback) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
 const timeValue = (value, fallback = 30) => Math.min(600, Math.max(5, Number(value) || fallback));
 
-// live_start_at is TIMESTAMP WITHOUT TIME ZONE. Live-quiz SQL compares it
-// against the Asia/Kolkata wall clock, so datetime-local values must never be
-// silently shifted by the Node/PostgreSQL server timezone.
+// The admin UI sends an IST wall-clock value. Convert it once to an absolute
+// instant. The database column is TIMESTAMPTZ after migration 013, so neither
+// the Node server timezone nor the browser timezone can add another +05:30.
 const normalizeIstTimestamp = (value) => {
   if (!value) return value;
   const text = String(value).trim();
   if (!text) return null;
-  if (!/[zZ]|[+-]\d{2}:\d{2}$/.test(text)) return text.slice(0, 19).replace('T', ' ');
-  const date = new Date(text);
-  if (Number.isNaN(date.getTime())) return text.slice(0, 19).replace('T', ' ');
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  }).formatToParts(date).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
-  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+    return text;
+  }
+  const wall = text.slice(0, 19).replace('T', ' ');
+  const date = new Date(`${wall.replace(' ', 'T')}+05:30`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 };
 
 const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds }) => {
@@ -57,12 +58,10 @@ const create = async ({ title, description, category_id, difficulty, duration, p
 const update = async (id, fields) => {
   const current = await query('SELECT is_live_quiz FROM quizzes WHERE id = $1', [id]);
   if (!current.rows.length) { const e = new Error('Quiz not found'); e.status = 404; throw e; }
-
   const willBeLive = Boolean(current.rows[0].is_live_quiz || fields.is_live_quiz === true);
   const allowed = ['title','description','category_id','difficulty','duration','passing_score','max_attempts','thumbnail_url','is_live_quiz','live_start_at','live_end_at','live_all_domains','live_score_025','live_score_050','live_score_075','live_score_100','live_score_wrong','live_same_question_time','live_question_time_seconds'];
   const updates = [], params = [];
   let idx = 1;
-
   for (const key of allowed) {
     if (fields[key] === undefined) continue;
     if (key === 'duration' && willBeLive) continue;
@@ -77,12 +76,10 @@ const update = async (id, fields) => {
     params.push(val);
     idx++;
   }
-
   if (willBeLive) updates.push('duration = 1');
   if (!updates.length) { const e = new Error('No fields to update'); e.status = 400; throw e; }
   updates.push('updated_at = NOW()');
   params.push(id);
-
   const result = await query(`UPDATE quizzes SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`, params);
   if (!result.rows.length) { const e = new Error('Quiz not found'); e.status = 404; throw e; }
   if (result.rows[0].is_live_quiz && result.rows[0].live_same_question_time && fields.live_question_time_seconds !== undefined) {
