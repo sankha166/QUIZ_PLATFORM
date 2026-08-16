@@ -6,49 +6,26 @@
   --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 55%, #7c3aed 100%);
   --brand-gradient-hover: linear-gradient(135deg, #4338ca 0%, #4f46e5 55%, #6d28d9 100%);
   --page-bg: #f7f8fc;
-  --surface: #ffffff;
-  --border: #e7e9f0;
-  --text: #172033;
-  --muted: #687386;
 }
 
 @layer base {
   * { box-sizing: border-box; }
-  html {
-    scroll-behavior: smooth;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-  }
-  body {
-    @apply bg-slate-50 text-slate-900 font-sans;
-    margin: 0;
-    min-width: 320px;
-    line-height: 1.5;
-    transition: background-color .2s ease, color .2s ease;
-  }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+  body { @apply bg-slate-50 text-slate-900 font-sans; margin: 0; min-width: 320px; line-height: 1.5; transition: background-color .2s ease, color .2s ease; }
   button, input, textarea, select { font: inherit; }
   button { -webkit-tap-highlight-color: transparent; }
   a { color: inherit; text-decoration: none; }
   ::selection { @apply bg-brand-200 text-brand-900; }
   :focus-visible { outline: 3px solid rgba(99,102,241,.28); outline-offset: 2px; }
   h1, h2, h3, h4 { letter-spacing: -0.018em; }
-  h1 { font-weight: 750; }
-  h2 { font-weight: 700; }
-  h3 { font-weight: 650; }
+  h1 { font-weight: 750; } h2 { font-weight: 700; } h3 { font-weight: 650; }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
-    min-height: 42px;
-  }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50; min-height: 42px; }
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .btn:active:not(:disabled) { transform: translateY(0); }
-  .btn-primary {
-    @apply btn text-white shadow-sm;
-    background: var(--brand-gradient);
-  }
+  .btn-primary { @apply btn text-white shadow-sm; background: var(--brand-gradient); }
   .btn-primary:hover:not(:disabled) { background: var(--brand-gradient-hover); box-shadow: 0 8px 20px rgba(79,70,229,.18); }
   .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300; }
   .btn-success { @apply btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700; }
@@ -64,7 +41,6 @@
   .section-subtitle { @apply mt-0.5 text-sm text-slate-500; }
   .stat-card { @apply rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5; }
   .glass-header { @apply border-b border-slate-200/80 bg-white/90 backdrop-blur-xl; }
-  .mobile-drawer { @apply fixed inset-y-0 left-0 z-[70] w-[min(21rem,88vw)] bg-white shadow-2xl; }
 }
 
 @layer utilities {
@@ -72,6 +48,10 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
+  /* Keep page hierarchy calm even where older screens used extreme weights. */
+  .font-black { font-weight: 700 !important; }
+  .font-extrabold { font-weight: 750 !important; }
+  .font-bold { font-weight: 650 !important; }
 }
 
 @layer base {
@@ -86,7 +66,6 @@
   .dark .glass-header { background: rgba(15,23,42,.92); border-color: #263247; }
   .dark .page-title, .dark .section-title { color: #f8fafc; }
   .dark .page-subtitle, .dark .section-subtitle { color: #94a3b8; }
-  .dark .mobile-drawer { background: #0f172a; color: #f8fafc; }
   .dark .text-slate-900 { color: #f8fafc; }
   .dark .text-slate-800 { color: #e2e8f0; }
   .dark .text-slate-700 { color: #cbd5e1; }
@@ -96,7 +75,7 @@
   .dark .bg-white { background-color: #111827; }
   .dark .bg-slate-50 { background-color: #111827; }
   .dark .bg-slate-100 { background-color: #0b1120; }
-  .dark .hover\:bg-slate-50:hover { background-color: #172033; }
+  .dark .hover\\:bg-slate-50:hover { background-color: #172033; }
 }
 
 @media (max-width: 639px) {
