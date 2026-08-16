@@ -9,4 +9,5 @@ ALTER TABLE quizzes
   ALTER COLUMN live_end_at TYPE TIMESTAMPTZ
   USING (live_end_at AT TIME ZONE 'Asia/Kolkata');
 
-CREATE INDEX IF
+CREATE INDEX IF NOT EXISTS idx_quizzes_live_start_at_tz
+  ON quizzes(is_live_quiz, live_start_at);
