@@ -1,7 +1,35 @@
 import api from './axios';
 
+const normalizeIstWallClock = (value) => {
+  if (!value) return value;
+  const text = String(value);
+  if (/[zZ]$/.test(text)) {
+    const d = new Date(text);
+    if (!Number.isNaN(d.getTime())) {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}+05:30`;
+    }
+  }
+  return text;
+};
+
 export const getQuizzes = (params) => api.get('/quizzes', { params, skipAuthRedirect: true });
-export const getQuizById = (id) => api.get(`/quizzes/${id}`);
+
+// Keep a live quiz's datetime-local value in IST. The DB intentionally stores
+// the Indian wall-clock time without a timezone, so converting the returned
+// ISO value as a normal instant would incorrectly add another 5h30m.
+export const getQuizById = async (id) => {
+  const response = await api.get(`/quizzes/${id}`);
+  if (response.data?.quiz?.is_live_quiz) {
+    response.data.quiz = {
+      ...response.data.quiz,
+      live_start_at: normalizeIstWallClock(response.data.quiz.live_start_at),
+      live_end_at: normalizeIstWallClock(response.data.quiz.live_end_at),
+    };
+  }
+  return response;
+};
+
 export const createQuiz = (data) => api.post('/quizzes', data);
 export const updateQuiz = (id, data) => api.put(`/quizzes/${id}`, data);
 export const deleteQuiz = (id) => api.delete(`/quizzes/${id}`);
