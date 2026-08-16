@@ -5,7 +5,11 @@ RETURNS TRIGGER AS $$
 DECLARE
   target_attempt_id INTEGER;
 BEGIN
-  target_attempt_id := COALESCE(NEW.attempt_id, OLD.attempt_id);
+  IF TG_OP = 'DELETE' THEN
+    target_attempt_id := OLD.attempt_id;
+  ELSE
+    target_attempt_id := NEW.attempt_id;
+  END IF;
 
   UPDATE attempts a
   SET live_rating = COALESCE((
@@ -39,7 +43,10 @@ BEGIN
         AND qz.is_live_quiz = TRUE
     );
 
-  RETURN COALESCE(NEW, OLD);
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
