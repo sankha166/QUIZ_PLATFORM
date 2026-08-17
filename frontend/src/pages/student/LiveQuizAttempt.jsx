@@ -86,11 +86,7 @@ export default function LiveQuizAttempt() {
         ...currentData,
         answers: [...(currentData.answers || []).filter((a) => String(a.question_id) !== String(q.id)), { question_id: q.id, selected_option_id: optionId ?? null, is_correct: r.data.correct, time_taken: r.data.timeTaken }],
       }));
-      if (expired) {
-        setWaitingForNext(false);
-      } else {
-        setWaitingForNext(true);
-      }
+      setWaitingForNext(!expired);
       transitionRef.current = false;
     } catch (e) {
       console.error(e);
@@ -107,7 +103,7 @@ export default function LiveQuizAttempt() {
     setReveal(null);
     setWaitingForNext(Boolean(previousAnswer));
     setSubmitting(false);
-  }, [q?.id, previousAnswer?.question_id]);
+  }, [q?.id]);
 
   useEffect(() => {
     if (!q) return;
