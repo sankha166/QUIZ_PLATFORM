@@ -9,8 +9,43 @@ const liveEndSql = `COALESCE(q.live_end_at,q.live_start_at + (SELECT COALESCE(SU
 const allDomainSql = `(q.live_all_domains=true OR q.category_id IS NULL)`;
 const nowSql = `NOW()`;
 
+// Rebuild completed/expired live attempts from the answers that were actually
+// persisted. This is intentionally independent from the normal quiz scoring
+// system so live ratings cannot be lost because of request ordering.
+const liveRatingSql = (attemptPlaceholder = '$1') => `COALESCE((
+  SELECT SUM(
+    CASE
+      WHEN ans.is_correct = TRUE THEN
+        COALESCE(q.marks, 1) * CASE
+          WHEN COALESCE(ans.time_taken, 0) <= GREATEST(COALESCE(q.time_limit_seconds, 30), 5) * 0.25 THEN COALESCE(z.live_score_025, 2.00)
+          WHEN COALESCE(ans.time_taken, 0) <= GREATEST(COALESCE(q.time_limit_seconds, 30), 5) * 0.50 THEN COALESCE(z.live_score_050, 1.50)
+          WHEN COALESCE(ans.time_taken, 0) <= GREATEST(COALESCE(q.time_limit_seconds, 30), 5) * 0.75 THEN COALESCE(z.live_score_075, 1.25)
+          ELSE COALESCE(z.live_score_100, 1.00)
+        END
+      WHEN ans.selected_option_id IS NULL THEN 0
+      ELSE COALESCE(q.marks, 1) * COALESCE(z.live_score_wrong, -0.50)
+    END
+  )
+  FROM answers ans
+  JOIN questions q ON q.id = ans.question_id
+  JOIN quizzes z ON z.id = q.quiz_id
+  WHERE ans.attempt_id = ${attemptPlaceholder}
+    AND z.is_live_quiz = TRUE
+), 0)`;
+
+const finalizeExpiredLiveAttempts = async (quizId = null) => {
+  const params = [];
+  let filter = `q.is_live_quiz=true AND a.status='in_progress' AND COALESCE(q.live_end_at,q.live_start_at + (SELECT COALESCE(SUM(GREATEST(COALESCE(qu.time_limit_seconds,30),5)),0) * INTERVAL '1 second' FROM questions qu WHERE qu.quiz_id=q.id)) <= NOW()`;
+  if (quizId != null) {
+    params.push(quizId);
+    filter += ` AND a.quiz_id=$1`;
+  }
+  await query(`UPDATE attempts a SET live_rating=${liveRatingSql('a.id')},score=ROUND(${liveRatingSql('a.id')})::int,status='passed',completed_at=COALESCE(a.completed_at,NOW()) FROM quizzes q WHERE a.quiz_id=q.id AND ${filter}`, params);
+};
+
 router.get('/', authenticate, async (req, res, next) => {
   try {
+    await finalizeExpiredLiveAttempts();
     const admin = req.user.role === 'ADMIN';
     const params = [];
     let domainFilter = '';
@@ -33,6 +68,7 @@ router.get('/', authenticate, async (req, res, next) => {
 
 router.get('/stats', authenticate, async (req, res, next) => {
   try {
+    await finalizeExpiredLiveAttempts();
     const r = await query(`SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE status='draft')::int drafts,COUNT(*) FILTER(WHERE status='published' AND live_start_at <= ${nowSql} AND ${liveEndSql}>=${nowSql})::int live_now,COUNT(*) FILTER(WHERE status='published' AND live_start_at > ${nowSql})::int upcoming,COUNT(*) FILTER(WHERE status='unpublished' OR (${liveEndSql}<${nowSql} AND live_start_at<=${nowSql}))::int completed FROM quizzes q WHERE is_live_quiz=true`);
     if (req.user.role === 'ADMIN') {
       const a = await query(`SELECT COUNT(*)::int attempts,COALESCE(AVG(live_rating),0)::numeric(10,2) avg_rating FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE q.is_live_quiz=true AND a.status!='in_progress'`);
@@ -46,6 +82,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
 
 router.get('/ranking', authenticate, studentOnly, async (req, res, next) => {
   try {
+    await finalizeExpiredLiveAttempts();
     const r = await query(`WITH totals AS (SELECT u.id,u.name,u.avatar_url,u.bio,COUNT(a.id)::int attended,COALESCE(SUM(a.live_rating),0)::numeric(12,2) total_rating,COALESCE(MAX(a.live_rating),0)::numeric(12,2) best_rating FROM users u LEFT JOIN attempts a ON a.user_id=u.id AND a.status!='in_progress' AND a.quiz_id IN (SELECT id FROM quizzes WHERE is_live_quiz=true) WHERE u.role='STUDENT' AND u.status='active' GROUP BY u.id,u.name,u.avatar_url,u.bio),ranked AS (SELECT totals.*,ROW_NUMBER() OVER (ORDER BY total_rating DESC,attended DESC,name ASC)::int rank FROM totals WHERE attended>0) SELECT * FROM ranked ORDER BY rank ASC`);
     res.json({ success: true, ranking: r.rows, me: r.rows.find(x => String(x.id) === String(req.user.id)) || null });
   } catch (e) { next(e); }
@@ -53,6 +90,7 @@ router.get('/ranking', authenticate, studentOnly, async (req, res, next) => {
 
 router.get('/:quizId/stats', authenticate, async (req, res, next) => {
   try {
+    await finalizeExpiredLiveAttempts(req.params.quizId);
     const q = await query(`SELECT q.*,${liveEndSql} computed_end_at,CASE WHEN q.live_start_at>${nowSql} THEN 'upcoming' WHEN ${liveEndSql}>=${nowSql} THEN 'live' ELSE 'completed' END live_state FROM quizzes q WHERE q.id=$1 AND q.is_live_quiz=true`, [req.params.quizId]);
     if (!q.rows.length) return res.status(404).json({ success: false, message: 'Live quiz not found' });
     const quiz = q.rows[0];
@@ -91,12 +129,14 @@ router.post('/:quizId/end', authenticate, async (req, res, next) => {
     if (req.user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Admin access required' });
     const r = await query(`UPDATE quizzes SET status='unpublished',live_end_at=${nowSql},updated_at=NOW() WHERE id=$1 AND is_live_quiz=true AND live_start_at<=${nowSql} RETURNING id,status,live_end_at`, [req.params.quizId]);
     if (!r.rows.length) return res.status(404).json({ success: false, message: 'Live quiz not found or has not started' });
+    await finalizeExpiredLiveAttempts(req.params.quizId);
     res.json({ success: true, quiz: r.rows[0] });
   } catch (e) { next(e); }
 });
 
 router.post('/:quizId/start', authenticate, studentOnly, async (req, res, next) => {
   try {
+    await finalizeExpiredLiveAttempts(req.params.quizId);
     const r = await query(`SELECT q.*,c.domain_id,${liveEndSql} computed_end_at FROM quizzes q LEFT JOIN categories c ON c.id=q.category_id WHERE q.id=$1 AND q.is_live_quiz=true AND q.status='published' AND q.live_start_at<=${nowSql} AND ${liveEndSql}>${nowSql} AND (${allDomainSql} OR c.domain_id=(SELECT preferred_domain_id FROM users WHERE id=$2) OR (SELECT preferred_domain_id FROM users WHERE id=$2) IS NULL)`, [req.params.quizId, req.user.id]);
     if (!r.rows.length) return res.status(403).json({ success: false, message: 'This live quiz is not available for your domain, has ended, or has not started' });
     const quiz = r.rows[0];
@@ -123,20 +163,19 @@ router.post('/:quizId/answer', authenticate, studentOnly, async (req, res, next)
     if (!ar.rows.length) return res.status(404).json({ success: false, message: 'Live attempt not found' });
     const x = qr.rows[0];
     const limit = Math.max(5, Number(x.time_limit_seconds) || 30);
-    const t = Math.max(0, Number(timeTaken) || 0);
-    if (t > limit) return res.status(400).json({ success: false, message: 'Question time expired' });
+    const t = Math.min(limit, Math.max(0, Number(timeTaken) || 0));
     const correct = optionId != null && String(optionId) === String(x.correct_option_id);
     let multiplier = 0;
     if (correct) {
       const ratio = t / limit;
-      multiplier = ratio <= .25 ? Number(x.live_score_025) : ratio <= .5 ? Number(x.live_score_050) : ratio <= .75 ? Number(x.live_score_075) : Number(x.live_score_100);
+      multiplier = ratio <= .25 ? Number(x.live_score_025 ?? 2) : ratio <= .5 ? Number(x.live_score_050 ?? 1.5) : ratio <= .75 ? Number(x.live_score_075 ?? 1.25) : Number(x.live_score_100 ?? 1);
     } else if (optionId != null) {
-      multiplier = Number(x.live_score_wrong);
+      multiplier = Number(x.live_score_wrong ?? -0.5);
     }
     const rating = Number((Number(x.marks || 1) * multiplier).toFixed(2));
 
     await query(`INSERT INTO answers(attempt_id,question_id,selected_option_id,is_correct,time_taken,response_at) VALUES($1,$2,$3,$4,$5,NOW()) ON CONFLICT(attempt_id,question_id) DO UPDATE SET selected_option_id=EXCLUDED.selected_option_id,is_correct=EXCLUDED.is_correct,time_taken=EXCLUDED.time_taken,response_at=NOW()`, [attemptId, questionId, optionId || null, optionId != null ? correct : null, t]);
-    await query(`UPDATE attempts SET live_rating=COALESCE((SELECT SUM(CASE WHEN a.is_correct=true THEN q.marks*(CASE WHEN a.time_taken<=q.time_limit_seconds*.25 THEN z.live_score_025 WHEN a.time_taken<=q.time_limit_seconds*.5 THEN z.live_score_050 WHEN a.time_taken<=q.time_limit_seconds*.75 THEN z.live_score_075 ELSE z.live_score_100 END) WHEN a.selected_option_id IS NULL THEN 0 ELSE q.marks*z.live_score_wrong END) FROM answers a JOIN questions q ON q.id=a.question_id JOIN quizzes z ON z.id=q.quiz_id WHERE a.attempt_id=$1),0) WHERE id=$2`, [attemptId, attemptId]);
+    await query(`UPDATE attempts SET live_rating=${liveRatingSql('$1')} WHERE id=$1`, [attemptId]);
     const d = await query(`SELECT o.id,COUNT(a.id)::int chosen FROM options o LEFT JOIN answers a ON a.question_id=o.question_id AND a.selected_option_id=o.id AND a.attempt_id IN(SELECT id FROM attempts WHERE quiz_id=$1) WHERE o.question_id=$2 GROUP BY o.id ORDER BY o.id`, [req.params.quizId, questionId]);
     const latest = await query('SELECT COALESCE(live_rating,0)::numeric(10,2) rating FROM attempts WHERE id=$1', [attemptId]);
     res.json({ success: true, correct, correctOptionId: x.correct_option_id, rating, totalRating: latest.rows[0].rating, multiplier, distribution: d.rows });
@@ -145,13 +184,19 @@ router.post('/:quizId/answer', authenticate, studentOnly, async (req, res, next)
 
 router.post('/:quizId/finish', authenticate, studentOnly, async (req, res, next) => {
   try {
-    const a = await query(`SELECT id FROM attempts WHERE id=$1 AND quiz_id=$2 AND user_id=$3 AND status='in_progress'`, [req.body.attemptId, req.params.quizId, req.user.id]);
+    const attemptId = req.body.attemptId;
+    const a = await query(`SELECT a.id,a.live_rating,q.live_start_at,${liveEndSql} computed_end_at FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.id=$1 AND a.quiz_id=$2 AND a.user_id=$3 AND a.status='in_progress' AND q.is_live_quiz=true`, [attemptId, req.params.quizId, req.user.id]);
     if (!a.rows.length) return res.status(404).json({ success: false, message: 'Live attempt not found' });
 
-    // Recalculate from persisted answers immediately before finalizing. This
-    // makes the completed rating authoritative even if the last answer was
-    // submitted at the question deadline or the browser was briefly delayed.
-    const finalized = await query(`UPDATE attempts SET live_rating=COALESCE((SELECT SUM(CASE WHEN ans.is_correct=true THEN q.marks*(CASE WHEN ans.time_taken<=q.time_limit_seconds*.25 THEN z.live_score_025 WHEN ans.time_taken<=q.time_limit_seconds*.5 THEN z.live_score_050 WHEN ans.time_taken<=q.time_limit_seconds*.75 THEN z.live_score_075 ELSE z.live_score_100 END) WHEN ans.selected_option_id IS NULL THEN 0 ELSE q.marks*z.live_score_wrong END) FROM answers ans JOIN questions q ON q.id=ans.question_id JOIN quizzes z ON z.id=q.quiz_id WHERE ans.attempt_id=$1),0),status='passed',score=ROUND(COALESCE((SELECT SUM(CASE WHEN ans.is_correct=true THEN q.marks*(CASE WHEN ans.time_taken<=q.time_limit_seconds*.25 THEN z.live_score_025 WHEN ans.time_taken<=q.time_limit_seconds*.5 THEN z.live_score_050 WHEN ans.time_taken<=q.time_limit_seconds*.75 THEN z.live_score_075 ELSE z.live_score_100 END) WHEN ans.selected_option_id IS NULL THEN 0 ELSE q.marks*z.live_score_wrong END) FROM answers ans JOIN questions q ON q.id=ans.question_id JOIN quizzes z ON z.id=q.quiz_id WHERE ans.attempt_id=$1),0))::int,percentage=NULL,completed_at=NOW() WHERE id=$1 RETURNING live_rating`, [req.body.attemptId]);
+    const progress = await query(`SELECT (SELECT COUNT(*)::int FROM questions WHERE quiz_id=$1) question_count,(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$2) answered_count`, [req.params.quizId, attemptId]);
+    const questionCount = progress.rows[0].question_count;
+    const answeredCount = progress.rows[0].answered_count;
+    const eventEnded = new Date(a.rows[0].computed_end_at).getTime() <= Date.now();
+    if (answeredCount < questionCount && !eventEnded) {
+      return res.status(409).json({ success: false, message: `Live quiz is not finished yet. ${questionCount - answeredCount} question(s) remain.`, remaining: questionCount - answeredCount });
+    }
+
+    const finalized = await query(`UPDATE attempts SET live_rating=${liveRatingSql('$1')},score=ROUND(${liveRatingSql('$1')})::int,correct_answers=(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$1 AND is_correct=true),incorrect_answers=(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$1 AND is_correct=false),unanswered=(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$1 AND selected_option_id IS NULL),time_taken=COALESCE((SELECT SUM(COALESCE(time_taken,0))::int FROM answers WHERE attempt_id=$1),0),status='passed',percentage=NULL,completed_at=NOW() WHERE id=$1 RETURNING live_rating`, [attemptId]);
     const finalRating = Number(finalized.rows[0]?.live_rating || 0);
     const rank = await query(`WITH totals AS (SELECT user_id,MAX(live_rating) rating FROM attempts WHERE quiz_id=$1 AND status!='in_progress' GROUP BY user_id) SELECT COUNT(*)::int+1 rank FROM totals WHERE rating>$2`, [req.params.quizId, finalRating]);
     res.json({ success: true, rating: finalRating, rank: rank.rows[0].rank });
