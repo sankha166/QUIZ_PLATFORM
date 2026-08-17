@@ -4,7 +4,17 @@
 
 :root {
   --brand: #4f46e5;
+  --brand-strong: #4338ca;
   --brand-soft: #eef2ff;
+  --brand-border: #dfe3ff;
+  --info: #2563eb;
+  --info-soft: #eff6ff;
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --live: #e11d48;
+  --live-soft: #fff1f2;
   --page-bg: #f7f8fc;
   --surface: #ffffff;
   --text-primary: #172033;
@@ -12,7 +22,7 @@
   --text-muted: #8a94a3;
   --border-soft: #e7eaf0;
   --shadow-card: 0 1px 3px rgba(15, 23, 42, .045), 0 1px 2px rgba(15, 23, 42, .025);
-  --shadow-card-hover: 0 6px 18px rgba(15, 23, 42, .055);
+  --shadow-card-hover: 0 8px 22px rgba(15, 23, 42, .06);
 }
 
 @layer base {
@@ -47,7 +57,7 @@
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
   .btn:active:not(:disabled) { transform: translateY(0); }
   .btn-primary { @apply btn text-white shadow-sm; background: var(--brand); }
-  .btn-primary:hover:not(:disabled) { background: #4338ca; box-shadow: 0 5px 14px rgba(79,70,237,.12); }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-strong); box-shadow: 0 5px 14px rgba(79,70,237,.12); }
   .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300; }
   .btn-success { @apply btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700; }
   .btn-danger { @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700; }
@@ -55,17 +65,23 @@
   .input { @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10; letter-spacing: -0.004em; }
   .label { @apply mb-1.5 block text-sm text-slate-700; font-weight: 500; }
   .card { @apply rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200; box-shadow: var(--shadow-card); }
-  .card:hover { box-shadow: var(--shadow-card-hover); }
+  .card:hover { box-shadow: var(--shadow-card-hover); border-color: #e1e5f0; }
   .page-title { @apply text-2xl tracking-tight text-slate-900 sm:text-3xl; font-weight: 500; }
   .page-subtitle { @apply mt-1 text-sm leading-6 text-slate-500; }
   .section-title { @apply text-base text-slate-900 sm:text-lg; font-weight: 500; }
   .section-subtitle { @apply mt-0.5 text-sm text-slate-500; }
-  .stat-card { @apply rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5; box-shadow: var(--shadow-card); }
+  .stat-card { @apply rounded-2xl border border-slate-200/80 bg-white p-4 transition-all duration-200 sm:p-5; box-shadow: var(--shadow-card); }
+  .stat-card:hover { border-color: var(--brand-border); box-shadow: var(--shadow-card-hover); }
   .glass-header { @apply border-b border-slate-200/80 bg-white/95 backdrop-blur-xl; }
   .content-copy { color: var(--text-secondary); font-size: .925rem; line-height: 1.65; }
   .eyebrow { @apply text-[11px] uppercase tracking-[.12em] text-slate-400; font-weight: 500; }
   .field-help { @apply mt-1.5 text-xs leading-5 text-slate-400; }
-  .live-badge { @apply inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] uppercase tracking-[.08em] text-rose-700; font-weight: 500; }
+  .live-badge { @apply inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] uppercase tracking-[.08em] text-rose-700; font-weight: 500; }
+  .live-badge::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: currentColor; box-shadow: 0 0 0 3px rgba(225,29,72,.08); }
+  .status-live { color: var(--live); background: var(--live-soft); border-color: #fecdd3; }
+  .status-success { color: var(--success); background: var(--success-soft); border-color: #a7f3d0; }
+  .status-warning { color: var(--warning); background: var(--warning-soft); border-color: #fde68a; }
+  .status-info { color: var(--info); background: var(--info-soft); border-color: #bfdbfe; }
 }
 
 @layer utilities {
@@ -73,7 +89,7 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
-  /* Deliberately keep emphasis restrained. 600 is reserved for rare key values. */
+  /* Keep hierarchy restrained: emphasis comes from size, spacing and color before weight. */
   .font-black { font-weight: 600 !important; }
   .font-extrabold { font-weight: 500 !important; }
   .font-bold { font-weight: 500 !important; }
