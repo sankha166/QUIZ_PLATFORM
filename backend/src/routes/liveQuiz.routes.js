@@ -29,9 +29,9 @@ const finalizeExpiredLiveAttempts = async (quizId = null) => {
 
 const repairLiveRatings = async (quizId = null) => {
   const params=[];
-  let where=`a.quiz_id IN (SELECT id FROM quizzes WHERE is_live_quiz=true)`;
-  if (quizId != null) { params.push(quizId); where='a.quiz_id=$1'; }
-  await query(`UPDATE attempts a SET live_rating=${liveRatingSql(quizId != null ? '$1' : 'a.id')} WHERE ${where}`,params);
+  const where=quizId != null ? 'a.quiz_id=$1' : `a.quiz_id IN (SELECT id FROM quizzes WHERE is_live_quiz=true)`;
+  if (quizId != null) params.push(quizId);
+  await query(`UPDATE attempts a SET live_rating=${liveRatingSql('a.id')} WHERE ${where}`,params);
 };
 
 const timelineSql = `
@@ -41,8 +41,7 @@ const timelineSql = `
   FROM questions q JOIN quizzes z ON z.id=q.quiz_id`;
 
 router.get('/',authenticate,async(req,res,next)=>{try{
-  await finalizeExpiredLiveAttempts();
-  await repairLiveRatings();
+  await finalizeExpiredLiveAttempts(); await repairLiveRatings();
   const admin=req.user.role==='ADMIN'; const params=[]; let domainFilter=''; let visibility=''; let mineSelect=''; let mineJoin='';
   if(!admin){params.push(req.user.id);domainFilter=`AND (${allDomainSql} OR c.domain_id=(SELECT preferred_domain_id FROM users WHERE id=$1) OR (SELECT preferred_domain_id FROM users WHERE id=$1) IS NULL)`;visibility=`AND (q.status='published' OR (q.status='unpublished' AND q.live_start_at<=${nowSql}))`;mineJoin=`LEFT JOIN attempts mya ON mya.quiz_id=q.id AND mya.user_id=$1 AND mya.status!='in_progress'`;mineSelect=`COUNT(DISTINCT mya.id)::int my_attempt_count,COALESCE(MAX(mya.live_rating),0)::numeric(10,2) my_rating,MAX(mya.completed_at) my_completed_at,`;}
   const r=await query(`SELECT q.*,c.name category_name,c.domain_id,d.name domain_name,${mineSelect}COUNT(DISTINCT a.id)::int attempt_count,COUNT(DISTINCT lqr.id)::int registration_count,COUNT(DISTINCT qs.id)::int question_count,${liveEndSql} computed_end_at,(q.live_start_at AT TIME ZONE 'Asia/Kolkata')::text live_start_ist,CASE WHEN q.live_start_at>${nowSql} THEN 'upcoming' WHEN ${liveEndSql}>=${nowSql} THEN 'live' ELSE 'completed' END live_state FROM quizzes q LEFT JOIN categories c ON c.id=q.category_id LEFT JOIN domains d ON d.id=c.domain_id LEFT JOIN questions qs ON qs.quiz_id=q.id LEFT JOIN attempts a ON a.quiz_id=q.id AND a.status!='in_progress' LEFT JOIN live_quiz_registrations lqr ON lqr.quiz_id=q.id ${mineJoin} WHERE q.is_live_quiz=true ${visibility} ${domainFilter} GROUP BY q.id,c.name,c.domain_id,d.name ORDER BY q.live_start_at ASC`,params);
@@ -121,8 +120,8 @@ router.post('/:quizId/answer',authenticate,studentOnly,async(req,res,next)=>{try
 router.post('/:quizId/finish',authenticate,studentOnly,async(req,res,next)=>{try{
   const attemptId=req.body.attemptId; const a=await query(`SELECT a.id,a.live_rating,q.live_start_at,${liveEndSql} computed_end_at FROM attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.id=$1 AND a.quiz_id=$2 AND a.user_id=$3 AND a.status='in_progress' AND q.is_live_quiz=true`,[attemptId,req.params.quizId,req.user.id]);
   if(!a.rows.length)return res.status(404).json({success:false,message:'Live attempt not found'});
-  const progress=await query(`SELECT (SELECT COUNT(*)::int FROM questions WHERE quiz_id=$1) question_count,(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$2) answered_count,(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$2 AND is_correct=true) correct_count,(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$2 AND is_correct=false) incorrect_count`,[req.params.quizId,attemptId]);
-  const p=progress.rows[0], eventEnded=new Date(a.rows[0].computed_end_at).getTime()<=Date.now(); if(Number(p.answered_count)<Number(p.question_count)&&!eventEnded)return res.status(409).json({success:false,message:`Live quiz is not finished yet. ${Number(p.question_count)-Number(p.answered_count)} question(s) remain.`,remaining:Number(p.question_count)-Number(p.answered_count)});
+  const progress=await query(`SELECT (SELECT COUNT(*)::int FROM questions WHERE quiz_id=$1) question_count,(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$2) answered_count`,[req.params.quizId,attemptId]);
+  const p=progress.rows[0],eventEnded=new Date(a.rows[0].computed_end_at).getTime()<=Date.now(); if(Number(p.answered_count)<Number(p.question_count)&&!eventEnded)return res.status(409).json({success:false,message:`Live quiz is not finished yet. ${Number(p.question_count)-Number(p.answered_count)} question(s) remain.`,remaining:Number(p.question_count)-Number(p.answered_count)});
   const finalized=await query(`UPDATE attempts SET live_rating=${liveRatingSql('$1')},score=ROUND(${liveRatingSql('$1')})::int,correct_answers=(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$1 AND is_correct=true),incorrect_answers=(SELECT COUNT(*)::int FROM answers WHERE attempt_id=$1 AND is_correct=false),unanswered=GREATEST(0,(SELECT COUNT(*) FROM questions WHERE quiz_id=$2)-(SELECT COUNT(*) FROM answers WHERE attempt_id=$1)),time_taken=COALESCE((SELECT SUM(COALESCE(time_taken,0))::int FROM answers WHERE attempt_id=$1),0),status='passed',percentage=NULL,completed_at=NOW() WHERE id=$1 RETURNING live_rating`,[attemptId,req.params.quizId]);
   const finalRating=Number(finalized.rows[0]?.live_rating||0); const rank=await query(`WITH totals AS(SELECT user_id,MAX(live_rating) rating FROM attempts WHERE quiz_id=$1 AND status!='in_progress' GROUP BY user_id) SELECT COUNT(*)::int+1 rank FROM totals WHERE rating>$2`,[req.params.quizId,finalRating]);
   res.json({success:true,rating:finalRating,rank:rank.rows[0].rank});
