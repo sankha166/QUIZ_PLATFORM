@@ -3,14 +3,14 @@ const { query } = require('../config/db');
 const authenticate = require('../middleware/auth');
 
 const ratingSql = (attemptRef) => `COALESCE((SELECT SUM(CASE
-  WHEN ans.is_correct = TRUE THEN COALESCE(q.marks,1) * CASE
+  WHEN COALESCE(ans.is_correct,opt.is_correct,FALSE) = TRUE THEN COALESCE(q.marks,1) * CASE
     WHEN COALESCE(ans.time_taken,0) <= GREATEST(COALESCE(q.time_limit_seconds,30),5) * 0.25 THEN COALESCE(z.live_score_025,2.00)
     WHEN COALESCE(ans.time_taken,0) <= GREATEST(COALESCE(q.time_limit_seconds,30),5) * 0.50 THEN COALESCE(z.live_score_050,1.50)
     WHEN COALESCE(ans.time_taken,0) <= GREATEST(COALESCE(q.time_limit_seconds,30),5) * 0.75 THEN COALESCE(z.live_score_075,1.25)
     ELSE COALESCE(z.live_score_100,1.00) END
   WHEN ans.selected_option_id IS NULL THEN 0
   ELSE COALESCE(q.marks,1) * COALESCE(z.live_score_wrong,-0.50)
-END) FROM answers ans JOIN questions q ON q.id=ans.question_id JOIN quizzes z ON z.id=q.quiz_id WHERE ans.attempt_id=${attemptRef} AND z.is_live_quiz=true),0)`;
+END) FROM answers ans JOIN questions q ON q.id=ans.question_id JOIN quizzes z ON z.id=q.quiz_id LEFT JOIN options opt ON opt.id=ans.selected_option_id WHERE ans.attempt_id=${attemptRef} AND z.is_live_quiz=true),0)`;
 
 router.get('/:quizId', authenticate, async (req,res,next) => {
   try {
@@ -20,8 +20,6 @@ router.get('/:quizId', authenticate, async (req,res,next) => {
     if (!quiz.rows.length) return res.status(404).json({success:false,message:'Live quiz not found'});
     const q = quiz.rows[0];
 
-    // Recalculate from answer rows before reading the result. This makes the
-    // result screen authoritative even for attempts created by older builds.
     await query(`UPDATE attempts a SET live_rating=${ratingSql('a.id')}, score=ROUND(${ratingSql('a.id')})::int
       WHERE a.quiz_id=$1 AND a.status!='in_progress'`, [q.id]);
 
@@ -29,7 +27,7 @@ router.get('/:quizId', authenticate, async (req,res,next) => {
       COALESCE(AVG(live_rating),0)::numeric(10,2) avg_rating
       FROM attempts WHERE quiz_id=$1 AND status!='in_progress'`, [q.id]);
 
-    let mine = { attempted:false, rating:0, rank:null, answered:0, correct:0, wrong:0, unanswered:q.question_count };
+    let mine = { attempted:false, rating:0, rank:null, answered:0, correct:0, wrong:0, unanswered:Number(q.question_count||0) };
     if (req.user.role === 'STUDENT') {
       const attempt = await query(`SELECT id,COALESCE(live_rating,0)::numeric(10,2) rating
         FROM attempts WHERE quiz_id=$1 AND user_id=$2 AND status!='in_progress'
@@ -37,10 +35,10 @@ router.get('/:quizId', authenticate, async (req,res,next) => {
       if (attempt.rows.length) {
         const a = attempt.rows[0];
         const counts = await query(`SELECT
-          COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL)::int answered,
-          COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL AND is_correct=true)::int correct,
-          COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL AND is_correct=false)::int wrong
-          FROM answers WHERE attempt_id=$1`, [a.id]);
+          COUNT(*) FILTER(WHERE ans.selected_option_id IS NOT NULL)::int answered,
+          COUNT(*) FILTER(WHERE ans.selected_option_id IS NOT NULL AND COALESCE(ans.is_correct,opt.is_correct,FALSE)=true)::int correct,
+          COUNT(*) FILTER(WHERE ans.selected_option_id IS NOT NULL AND COALESCE(ans.is_correct,opt.is_correct,FALSE)=false)::int wrong
+          FROM answers ans LEFT JOIN options opt ON opt.id=ans.selected_option_id WHERE ans.attempt_id=$1`, [a.id]);
         const c = counts.rows[0] || {};
         const answered = Number(c.answered || 0);
         const correct = Number(c.correct || 0);
