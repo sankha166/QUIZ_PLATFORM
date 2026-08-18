@@ -11,6 +11,7 @@ export const getLiveQuizzes = async () => {
 };
 
 export const getLiveQuizStats = (id) => api.get(id ? `/live-quizzes/${id}/stats` : '/live-quizzes/stats');
+export const getLiveQuizResult = (id) => api.get(`/live-quiz-results/${id}`);
 export const getLiveRanking = () => api.get('/live-quizzes/ranking');
 export const getAdminLiveQuizStats = (id) => api.get(`/live-quizzes/${id}/stats`);
 export const getLiveRegistration = (id) => api.get(`/live-quizzes/${id}/registration`);
