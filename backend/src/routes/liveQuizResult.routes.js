@@ -10,19 +10,28 @@ router.get('/:quizId', authenticate, async (req, res, next) => {
     if (!quizResult.rows.length) return res.status(404).json({ success:false, message:'Live quiz not found' });
     const quiz = quizResult.rows[0];
 
-    await query(`UPDATE attempts a SET live_rating=${liveRatingSql('a.id')},score=ROUND(${liveRatingSql('a.id')})::int WHERE a.quiz_id=$1 AND a.status!='in_progress'`, [quiz.id]);
+    // Keep live ratings authoritative from answer rows, while the attempt summary
+    // fields remain the fallback for older attempts whose answer rows are incomplete.
+    await query(`UPDATE attempts a SET live_rating=${liveRatingSql('a.id')},score=ROUND(${liveRatingSql('a.id')})::int WHERE a.quiz_id=$1 AND a.status!='in_progress' AND EXISTS(SELECT 1 FROM answers ans WHERE ans.attempt_id=a.id)`, [quiz.id]);
 
     const eventResult = await query(`SELECT COUNT(*)::int AS attempts,COUNT(DISTINCT user_id)::int AS students,COALESCE(AVG(live_rating),0)::numeric(10,2) AS avg_rating FROM attempts WHERE quiz_id=$1 AND status!='in_progress'`, [quiz.id]);
 
     let mine={attempted:false,rating:0,rank:null,answered:0,correct:0,wrong:0,unanswered:Number(quiz.question_count||0)};
     if(req.user.role==='STUDENT'){
-      const attemptResult=await query(`SELECT id,COALESCE(live_rating,0)::numeric(10,2) rating FROM attempts WHERE quiz_id=$1 AND user_id=$2 AND status!='in_progress' ORDER BY completed_at DESC NULLS LAST,id DESC LIMIT 1`,[quiz.id,req.user.id]);
+      const attemptResult=await query(`SELECT id,COALESCE(live_rating,0)::numeric(10,2) rating,COALESCE(correct_answers,0)::int correct_answers,COALESCE(incorrect_answers,0)::int incorrect_answers,COALESCE(unanswered,0)::int unanswered FROM attempts WHERE quiz_id=$1 AND user_id=$2 AND status!='in_progress' ORDER BY completed_at DESC NULLS LAST,id DESC LIMIT 1`,[quiz.id,req.user.id]);
       if(attemptResult.rows.length){
         const attempt=attemptResult.rows[0];
         const answerResult=await query(`SELECT COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL)::int answered,COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL AND is_correct=true)::int correct,COUNT(*) FILTER(WHERE selected_option_id IS NOT NULL AND is_correct=false)::int wrong FROM answers WHERE attempt_id=$1`,[attempt.id]);
-        const answered=Number(answerResult.rows[0]?.answered||0),correct=Number(answerResult.rows[0]?.correct||0),wrong=Number(answerResult.rows[0]?.wrong||0),questionCount=Number(quiz.question_count||0);
+        const answerRows=answerResult.rows[0]||{};
+        const storedCorrect=Number(attempt.correct_answers||0),storedWrong=Number(attempt.incorrect_answers||0),storedUnanswered=Number(attempt.unanswered||0);
+        const hasAnswerRows=Number(answerRows.answered||0)>0;
+        const correct=hasAnswerRows?Number(answerRows.correct||0):storedCorrect;
+        const wrong=hasAnswerRows?Number(answerRows.wrong||0):storedWrong;
+        const answered=hasAnswerRows?Number(answerRows.answered||0):correct+wrong;
+        const questionCount=Number(quiz.question_count||0);
+        const unanswered=hasAnswerRows?Math.max(0,questionCount-answered):Math.max(0,storedUnanswered || questionCount-answered);
         const rankResult=await query(`WITH totals AS(SELECT user_id,MAX(live_rating) rating FROM attempts WHERE quiz_id=$1 AND status!='in_progress' GROUP BY user_id) SELECT COUNT(*)::int+1 rank FROM totals WHERE rating>$2`,[quiz.id,attempt.rating]);
-        mine={attempted:true,rating:Number(attempt.rating||0),rank:Number(rankResult.rows[0]?.rank||1),answered,correct,wrong,unanswered:Math.max(0,questionCount-answered)};
+        mine={attempted:true,rating:Number(attempt.rating||0),rank:Number(rankResult.rows[0]?.rank||1),answered,correct,wrong,unanswered};
       }
     }
     res.json({success:true,result:{id:quiz.id,title:quiz.title,status:quiz.status,live_start_at:quiz.live_start_at,live_end_at:quiz.live_end_at,question_count:Number(quiz.question_count||0),attempts:Number(eventResult.rows[0]?.attempts||0),students:Number(eventResult.rows[0]?.students||0),avg_rating:Number(eventResult.rows[0]?.avg_rating||0),...mine}});
