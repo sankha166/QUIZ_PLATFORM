@@ -11,7 +11,39 @@ export const getLiveQuizzes = async () => {
 };
 
 export const getLiveQuizStats = (id) => api.get(id ? `/live-quizzes/${id}/stats` : '/live-quizzes/stats');
-export const getLiveQuizResult = (id) => api.get(`/live-quiz-results/${id}`);
+
+// The dedicated result endpoint is authoritative. Keep a stats fallback so an
+// older backend deployment cannot make the Past Contest card appear dead.
+export const getLiveQuizResult = async (id) => {
+  try {
+    return await api.get(`/live-quiz-results/${id}`);
+  } catch (error) {
+    const fallback = await api.get(`/live-quizzes/${id}/stats`);
+    return {
+      ...fallback,
+      data: {
+        ...fallback.data,
+        result: {
+          ...(fallback.data?.stats || {}),
+          id,
+          title: fallback.data?.stats?.title || 'Live quiz result',
+          question_count: fallback.data?.stats?.question_count ?? 0,
+          attempts: fallback.data?.stats?.attempts ?? 0,
+          students: fallback.data?.stats?.students ?? 0,
+          avg_rating: fallback.data?.stats?.avg_rating ?? 0,
+          attempted: fallback.data?.stats?.attempted ?? false,
+          rating: fallback.data?.stats?.rating ?? 0,
+          rank: fallback.data?.stats?.rank ?? null,
+          answered: fallback.data?.stats?.answered ?? 0,
+          correct: fallback.data?.stats?.correct ?? 0,
+          wrong: fallback.data?.stats?.wrong ?? 0,
+          unanswered: fallback.data?.stats?.unanswered ?? 0,
+        },
+      },
+    };
+  }
+};
+
 export const getLiveRanking = () => api.get('/live-quizzes/ranking');
 export const getAdminLiveQuizStats = (id) => api.get(`/live-quizzes/${id}/stats`);
 export const getLiveRegistration = (id) => api.get(`/live-quizzes/${id}/registration`);
