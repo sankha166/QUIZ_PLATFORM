@@ -6,7 +6,23 @@ const normalizeQuiz = (quiz) => quiz;
 
 export const getLiveQuizzes = async () => {
   const response = await api.get('/live-quizzes');
-  if (Array.isArray(response.data?.quizzes)) response.data.quizzes = response.data.quizzes.map(normalizeQuiz);
+  if (Array.isArray(response.data?.quizzes)) {
+    const quizzes = response.data.quizzes.map(normalizeQuiz);
+    const enriched = await Promise.all(quizzes.map(async (quiz) => {
+      if (quiz.live_state !== 'completed' || Number(quiz.my_attempt_count || 0) === 0) return quiz;
+      try {
+        const stats = await api.get(`/live-quizzes/${quiz.id}/stats`);
+        return {
+          ...quiz,
+          my_rank: stats.data?.stats?.rank ?? null,
+          my_rating: stats.data?.stats?.rating ?? quiz.my_rating ?? 0,
+        };
+      } catch {
+        return quiz;
+      }
+    }));
+    response.data.quizzes = enriched;
+  }
   return response;
 };
 
