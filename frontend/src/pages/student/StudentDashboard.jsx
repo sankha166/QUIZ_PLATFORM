@@ -1284,7 +1284,7 @@ export default function StudentDashboard() {
         {/* Welcome                                                    */}
         {/* ======================================================== */}
 
-        <div className="rounded-3xl bg-gradient-to-r from-brand-500 to-purple-600 p-8 text-white shadow-glow">
+        <div className="rounded-3xl bg-gradient-to-r from-brand-500 to-purple-600 p-8 text-white ">
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
