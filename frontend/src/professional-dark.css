@@ -1,41 +1,51 @@
-/* Professional dark surface system: neutral black/charcoal, with color reserved for meaning. */
-.dark,
-.dark body,
-.dark #root { background:#080808 !important; color:#e5e5e5; }
-.dark body { background-image:none !important; }
-.dark .bg-white,.dark .bg-white\/95,.dark .bg-white\/90,.dark .bg-white\/80 { background-color:#111111 !important; }
-.dark .bg-slate-50,.dark .bg-slate-50\/60,.dark .bg-slate-50\/80,.dark .bg-gray-50 { background-color:#0d0d0d !important; }
-.dark .bg-slate-100,.dark .bg-gray-100 { background-color:#171717 !important; }
-.dark .bg-slate-200,.dark .bg-gray-200 { background-color:#202020 !important; }
-.dark .border-slate-100,.dark .border-slate-200,.dark .border-slate-200\/80,.dark .border-slate-300,.dark .border-gray-200,.dark .border-gray-300 { border-color:#292929 !important; }
-.dark .text-slate-950,.dark .text-slate-900,.dark .text-gray-950,.dark .text-gray-900 { color:#f2f2f2 !important; }
-.dark .text-slate-800,.dark .text-gray-800 { color:#dedede !important; }
-.dark .text-slate-700,.dark .text-slate-600,.dark .text-gray-700,.dark .text-gray-600 { color:#bdbdbd !important; }
-.dark .text-slate-500,.dark .text-slate-400,.dark .text-gray-500,.dark .text-gray-400 { color:#858585 !important; }
-.dark .text-slate-300,.dark .text-gray-300 { color:#a3a3a3 !important; }
-.dark .card,.dark .stat-card { background:#111111 !important; border-color:#292929 !important; box-shadow:0 8px 28px rgba(0,0,0,.28) !important; }
-.dark .card:hover,.dark .stat-card:hover { background:#141414 !important; border-color:#383838 !important; box-shadow:0 12px 34px rgba(0,0,0,.38) !important; }
-.dark .glass-header { background:rgba(8,8,8,.94) !important; border-color:#242424 !important; }
-.dark .btn-secondary,.dark .btn-icon,.dark .input,.dark select,.dark textarea { background:#111111 !important; border-color:#303030 !important; color:#e8e8e8 !important; }
-.dark .btn-secondary:hover,.dark .btn-icon:hover,.dark .input:focus,.dark select:focus,.dark textarea:focus { background:#171717 !important; border-color:#444444 !important; }
-.dark .btn-primary { background:#f2f2f2 !important; color:#090909 !important; box-shadow:0 4px 14px rgba(0,0,0,.28) !important; }
-.dark .btn-primary:hover:not(:disabled) { background:#ffffff !important; color:#050505 !important; }
-/* Neutralize decorative blue/purple surfaces. */
-.dark .bg-indigo-50,.dark .bg-indigo-100,.dark .bg-blue-50,.dark .bg-blue-100,.dark .bg-purple-50,.dark .bg-violet-50,.dark .bg-cyan-50 { background-color:#171717 !important; }
-.dark .border-indigo-100,.dark .border-indigo-200,.dark .border-indigo-300,.dark .border-blue-100,.dark .border-blue-200,.dark .border-purple-200,.dark .border-violet-200,.dark .border-cyan-200 { border-color:#303030 !important; }
-.dark .text-indigo-950,.dark .text-indigo-900,.dark .text-indigo-800,.dark .text-indigo-700,.dark .text-indigo-600,.dark .text-indigo-500,.dark .text-blue-900,.dark .text-blue-800,.dark .text-blue-700,.dark .text-blue-600,.dark .text-blue-500,.dark .text-purple-700,.dark .text-violet-700,.dark .text-cyan-700 { color:#b8b8b8 !important; }
-/* Keep semantic status colors, but keep their surfaces quiet. */
-.dark .bg-emerald-50 { background-color:#101b16 !important; }
-.dark .bg-rose-50 { background-color:#1d1114 !important; }
-.dark .bg-amber-50 { background-color:#1c180e !important; }
-.dark .text-emerald-700 { color:#6ee7b7 !important; }
-.dark .text-emerald-800 { color:#86efac !important; }
-.dark .text-rose-700 { color:#fda4af !important; }
-.dark .text-rose-600 { color:#fb7185 !important; }
-.dark .text-amber-700 { color:#fcd34d !important; }
-.dark .hover\:bg-slate-50:hover,.dark .hover\:bg-white:hover,.dark .hover\:bg-indigo-50:hover { background-color:#171717 !important; }
-.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color:#292929 !important; }
-.dark .shadow-sm,.dark .shadow,.dark .shadow-lg,.dark .shadow-xl,.dark .shadow-2xl { --tw-shadow-color:rgba(0,0,0,.38) !important; }
-.dark .bg-slate-950 { background-color:#050505 !important; }
-.dark .ring-indigo-300,.dark .ring-indigo-400,.dark .ring-blue-300 { --tw-ring-color:#404040 !important; }
-.dark ::selection { background:#333333 !important; color:#ffffff !important; }
+/* Quizora professional dark theme: layered graphite surfaces, readable text, restrained color. */
+.dark,.dark body,.dark #root{background:#202328!important;color:#e8ebef}
+.dark body{background-image:none!important}
+.dark .bg-white,.dark .bg-white\/95,.dark .bg-white\/90,.dark .bg-white\/80{background-color:#292d33!important}
+.dark .bg-slate-50,.dark .bg-slate-50\/60,.dark .bg-slate-50\/70,.dark .bg-slate-50\/80,.dark .bg-gray-50{background-color:#25292e!important}
+.dark .bg-slate-100,.dark .bg-gray-100{background-color:#32373e!important}
+.dark .bg-slate-200,.dark .bg-gray-200{background-color:#3b4149!important}
+.dark .border-slate-100,.dark .border-slate-200,.dark .border-slate-200\/80,.dark .border-slate-300,.dark .border-gray-200,.dark .border-gray-300{border-color:#3b4048!important}
+.dark .text-slate-950,.dark .text-slate-900,.dark .text-gray-950,.dark .text-gray-900{color:#f5f6f7!important}
+.dark .text-slate-800,.dark .text-gray-800{color:#e2e5e9!important}
+.dark .text-slate-700,.dark .text-slate-600,.dark .text-gray-700,.dark .text-gray-600{color:#c4c9d0!important}
+.dark .text-slate-500,.dark .text-slate-400,.dark .text-gray-500,.dark .text-gray-400{color:#9ba2ac!important}
+.dark .text-slate-300,.dark .text-gray-300{color:#b3b9c2!important}
+.dark .card,.dark .stat-card{background:#292d33!important;border-color:#3b4048!important;box-shadow:0 4px 18px rgba(0,0,0,.12)!important}
+.dark .card:hover,.dark .stat-card:hover{background:#30353c!important;border-color:#484e57!important;box-shadow:0 8px 24px rgba(0,0,0,.15)!important}
+.dark .glass-header{background:rgba(32,35,40,.96)!important;border-color:#3a3f47!important}
+.dark .btn-secondary,.dark .btn-icon,.dark .input,.dark select,.dark textarea{background:#292d33!important;border-color:#454b54!important;color:#edf0f3!important}
+.dark .btn-secondary:hover,.dark .btn-icon:hover,.dark .input:focus,.dark select:focus,.dark textarea:focus{background:#343940!important;border-color:#555c66!important}
+.dark .btn-primary{background:#6366f1!important;color:#fff!important;box-shadow:0 4px 14px rgba(0,0,0,.18)!important}
+.dark .btn-primary:hover:not(:disabled){background:#818cf8!important;color:#fff!important}
+.dark .bg-indigo-50,.dark .bg-indigo-100,.dark .bg-blue-50,.dark .bg-blue-100,.dark .bg-purple-50,.dark .bg-violet-50,.dark .bg-cyan-50{background-color:#333841!important}
+.dark .border-indigo-100,.dark .border-indigo-200,.dark .border-indigo-300,.dark .border-blue-100,.dark .border-blue-200,.dark .border-purple-200,.dark .border-violet-200,.dark .border-cyan-200{border-color:#4b515b!important}
+.dark .text-indigo-950,.dark .text-indigo-900,.dark .text-indigo-800,.dark .text-indigo-700,.dark .text-indigo-600,.dark .text-indigo-500,.dark .text-blue-900,.dark .text-blue-800,.dark .text-blue-700,.dark .text-blue-600,.dark .text-blue-500,.dark .text-purple-700,.dark .text-violet-700,.dark .text-cyan-700{color:#aeb5bf!important}
+.dark .bg-emerald-50{background-color:#21352b!important}.dark .bg-rose-50{background-color:#3a252b!important}.dark .bg-amber-50{background-color:#39321f!important}
+.dark .text-emerald-700{color:#6ee7b7!important}.dark .text-emerald-800{color:#86efac!important}.dark .text-rose-700,.dark .text-rose-600{color:#fb7185!important}.dark .text-amber-700{color:#fcd34d!important}
+.dark .hover\:bg-slate-50:hover,.dark .hover\:bg-white:hover,.dark .hover\:bg-indigo-50:hover{background-color:#343940!important}
+.dark .divide-slate-200>:not([hidden])~:not([hidden]),.dark .divide-slate-100>:not([hidden])~:not([hidden]){border-color:#3b4048!important}
+.dark .shadow-sm,.dark .shadow,.dark .shadow-lg,.dark .shadow-xl,.dark .shadow-2xl{--tw-shadow-color:rgba(0,0,0,.15)!important}
+.dark .bg-slate-950{background-color:#1a1d21!important}.dark .ring-indigo-300,.dark .ring-indigo-400,.dark .ring-blue-300{--tw-ring-color:#626a75!important}.dark ::selection{background:#4a515b!important;color:#fff!important}
+
+/* Landing page: Home.jsx is light-first, so make the whole page one coherent theme. */
+.dark .min-h-screen.bg-white{background:#202328!important;color:#e8ebef!important}
+.dark .min-h-screen.bg-white>header{background:rgba(32,35,40,.97)!important;border-color:#3a3f47!important}
+.dark .min-h-screen.bg-white main>section{background:#202328!important;border-color:#353a42!important}
+.dark .min-h-screen.bg-white main>section:first-child,.dark .min-h-screen.bg-white main>section:nth-child(3){background:#25292e!important}
+.dark .min-h-screen.bg-white main .bg-white{background:#292d33!important;border-color:#41464f!important}
+.dark .min-h-screen.bg-white main .bg-slate-50,.dark .min-h-screen.bg-white main .bg-slate-50\/60,.dark .min-h-screen.bg-white main .bg-slate-50\/70{background:#32373e!important}
+.dark .min-h-screen.bg-white main .border-slate-100,.dark .min-h-screen.bg-white main .border-slate-200,.dark .min-h-screen.bg-white main .border-slate-200\/80{border-color:#41464f!important}
+.dark .min-h-screen.bg-white main .text-slate-950,.dark .min-h-screen.bg-white main .text-slate-900{color:#f5f6f7!important}
+.dark .min-h-screen.bg-white main .text-slate-700,.dark .min-h-screen.bg-white main .text-slate-600{color:#c4c9d0!important}
+.dark .min-h-screen.bg-white main .text-slate-500,.dark .min-h-screen.bg-white main .text-slate-400{color:#9ba2ac!important}
+.dark .min-h-screen.bg-white main .bg-slate-100{background:#3a3f47!important}
+.dark .min-h-screen.bg-white main .hover\:bg-slate-50:hover{background:#343940!important}
+.dark .min-h-screen.bg-white .bg-indigo-500{background:#6366f1!important}
+.dark .min-h-screen.bg-white .text-indigo-600,.dark .min-h-screen.bg-white .eyebrow.text-indigo-600{color:#a5b4fc!important}
+
+/* Student dashboard identity and welcome area. */
+.dark .student-profile-name{color:#f5f6f7!important}.dark .student-profile-email{color:#bfc5ce!important}
+.dark .student-welcome{background:linear-gradient(135deg,#343b55,#3d3b57 55%,#41405d)!important;border-color:#50566c!important}
+.dark .student-welcome h1{color:#fff!important}.dark .student-welcome .welcome-kicker{color:#d8dcf5!important}.dark .student-welcome .welcome-copy{color:#e0e3ef!important}
+.dark .recharts-cartesian-grid line{stroke:#41464f!important}.dark .recharts-text{fill:#aeb5bf!important}.dark .recharts-default-tooltip{background:#292d33!important;border:1px solid #454b54!important;color:#edf0f3!important}
