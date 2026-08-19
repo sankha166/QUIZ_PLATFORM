@@ -81,9 +81,7 @@
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
   .font-black { font-weight: 600 !important; }
-  .font-extrabold { font-weight: 500 !important; }
-  .font-bold { font-weight: 500 !important; }
-  .font-semibold { font-weight: 500 !important; }
+  .font-extrabold, .font-bold, .font-semibold { font-weight: 500 !important; }
   .shadow-2xl { box-shadow: 0 14px 34px rgba(15,23,42,.10) !important; }
   .shadow-xl { box-shadow: 0 10px 26px rgba(15,23,42,.075) !important; }
   .shadow-lg { box-shadow: 0 6px 18px rgba(15,23,42,.065) !important; }
@@ -93,7 +91,6 @@
   .rounded-lg { border-radius: .625rem !important; }
 }
 
-/* Professional dark theme: lighter graphite surfaces for clearer content. */
 @layer base {
   body.dark, .dark body, .dark #root { background: #202328 !important; color: #edf0f3; }
   .dark { color-scheme: dark; }
@@ -141,6 +138,28 @@
   .dark .to-purple-600, .dark .to-violet-50, .dark .to-white, .dark .to-orange-50 { background-color: #292d33 !important; }
   .dark .via-white { background-color: #292d33 !important; }
   .dark .bg-white\/15, .dark .bg-white\/10, .dark .bg-white\/5 { background-color: rgba(255,255,255,.09) !important; }
+
+  /* Student dashboard: soften the welcome block and make the profile identity readable. */
+  .dark .student-welcome { background: linear-gradient(135deg, #343b55 0%, #3d3b57 55%, #41405d 100%) !important; border: 1px solid #50556a; }
+  .dark .student-welcome h1 { color: #ffffff !important; font-weight: 600 !important; }
+  .dark .student-welcome .welcome-kicker { color: #d8dcf5 !important; }
+  .dark .student-welcome .welcome-copy { color: #e0e3ef !important; }
+  .dark .student-welcome .welcome-action { background: rgba(255,255,255,.13) !important; color: #ffffff !important; border: 1px solid rgba(255,255,255,.16); }
+  .dark .student-welcome .welcome-action:hover { background: rgba(255,255,255,.20) !important; }
+  .dark .student-profile-name { color: #f5f6f7 !important; }
+  .dark .student-profile-email { color: #bfc5ce !important; }
+
+  /* Landing page: keep the whole page on one coherent dark surface. */
+  .dark .landing-page { background: #202328 !important; color: #edf0f3 !important; }
+  .dark .landing-page header { background: rgba(32,35,40,.96) !important; border-color: #3a3f47 !important; }
+  .dark .landing-page main > section { background: #202328 !important; border-color: #353a42 !important; }
+  .dark .landing-page main > section:nth-child(even) { background: #25292e !important; }
+  .dark .landing-page .landing-card, .dark .landing-page .landing-feature, .dark .landing-page .landing-step { background: #292d33 !important; border-color: #41464f !important; color: #edf0f3 !important; box-shadow: 0 6px 22px rgba(0,0,0,.10); }
+  .dark .landing-page .landing-muted { color: #b4bac3 !important; }
+  .dark .landing-page .landing-heading { color: #f5f6f7 !important; }
+  .dark .landing-page .landing-chip { background: #343940 !important; color: #d8dce2 !important; border-color: #454b54 !important; }
+  .dark .landing-page .landing-divider { border-color: #3b4048 !important; }
+  .dark .landing-page .landing-progress-track { background: #3b4149 !important; }
 }
 
 @media (max-width: 639px) {
