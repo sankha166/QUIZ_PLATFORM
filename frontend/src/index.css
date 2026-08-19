@@ -28,26 +28,17 @@
 @layer base {
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-synthesis: none; }
-  body {
-    @apply bg-slate-50 text-slate-900;
-    margin: 0;
-    min-width: 320px;
-    line-height: 1.55;
-    font-size: 15px;
-    font-weight: 400;
-    letter-spacing: -0.004em;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-variant-numeric: tabular-nums;
-  }
+  body { @apply bg-slate-50 text-slate-900; margin: 0; min-width: 320px; line-height: 1.55; font-size: 15px; font-weight: 400; letter-spacing: -0.004em; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
   button, input, textarea, select { font: inherit; }
   button { -webkit-tap-highlight-color: transparent; }
   a { color: inherit; text-decoration: none; }
   ::selection { @apply bg-brand-200 text-brand-900; }
   :focus-visible { outline: 2px solid rgba(79,70,229,.22); outline-offset: 2px; }
   h1, h2, h3, h4, h5, h6 { color: var(--text-primary); font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1; text-wrap: balance; }
-  h1 { font-weight: 500; letter-spacing: -0.028em; line-height: 1.2; }
-  h2 { font-weight: 500; letter-spacing: -0.022em; line-height: 1.28; }
-  h3, h4, h5, h6 { font-weight: 500; letter-spacing: -0.012em; line-height: 1.32; }
+  h1, h2, h3, h4, h5, h6 { font-weight: 500; }
+  h1 { letter-spacing: -0.028em; line-height: 1.2; }
+  h2 { letter-spacing: -0.022em; line-height: 1.28; }
+  h3, h4, h5, h6 { letter-spacing: -0.012em; line-height: 1.32; }
   p { text-wrap: pretty; }
   small { font-size: .8125rem; }
 }
@@ -89,7 +80,6 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .text-balance { text-wrap: balance; }
-  /* Keep hierarchy restrained: emphasis comes from size, spacing and color before weight. */
   .font-black { font-weight: 600 !important; }
   .font-extrabold { font-weight: 500 !important; }
   .font-bold { font-weight: 500 !important; }
@@ -104,27 +94,53 @@
 }
 
 @layer base {
-  body.dark, .dark body { background: #0b1120; color: #e5e7eb; }
+  body.dark, .dark body, .dark #root { background: #080808 !important; color: #e5e5e5; }
   .dark { color-scheme: dark; }
-  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 { color: #f3f4f6; }
-  .dark .card, .dark .stat-card { background: #111827; border-color: #263247; color: #e5e7eb; box-shadow: 0 6px 24px rgba(0,0,0,.15); }
-  .dark .input { background: #111827; border-color: #334155; color: #f8fafc; }
-  .dark .input::placeholder { color: #64748b; }
-  .dark .label { color: #cbd5e1; }
-  .dark .btn-secondary, .dark .btn-icon { background: #111827; border-color: #334155; color: #e5e7eb; }
-  .dark .btn-secondary:hover, .dark .btn-icon:hover { background: #172033; }
-  .dark .glass-header { background: rgba(15,23,42,.94); border-color: #263247; }
-  .dark .page-title, .dark .section-title { color: #f8fafc; }
-  .dark .page-subtitle, .dark .section-subtitle { color: #94a3b8; }
-  .dark .text-slate-900 { color: #f8fafc; }
-  .dark .text-slate-800 { color: #e2e8f0; }
-  .dark .text-slate-700 { color: #cbd5e1; }
-  .dark .text-slate-600, .dark .text-slate-500 { color: #94a3b8; }
-  .dark .text-slate-400 { color: #64748b; }
-  .dark .border-slate-200, .dark .border-slate-100 { border-color: #334155; }
-  .dark .bg-white { background-color: #111827; }
-  .dark .bg-slate-50 { background-color: #111827; }
-  .dark .bg-slate-100 { background-color: #0b1120; }
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 { color: #f2f2f2; }
+  .dark .card, .dark .stat-card { background: #111111 !important; border-color: #292929 !important; color: #e5e5e5; box-shadow: 0 8px 28px rgba(0,0,0,.28); }
+  .dark .card:hover, .dark .stat-card:hover { background: #141414 !important; border-color: #383838 !important; box-shadow: 0 12px 34px rgba(0,0,0,.38); }
+  .dark .glass-header { background: rgba(8,8,8,.96) !important; border-color: #242424 !important; }
+  .dark .input, .dark select, .dark textarea { background: #111111 !important; border-color: #303030 !important; color: #e8e8e8 !important; }
+  .dark .input::placeholder { color: #737373; }
+  .dark .label { color: #d4d4d4; }
+  .dark .btn-secondary, .dark .btn-icon { background: #111111 !important; border-color: #303030 !important; color: #e8e8e8 !important; }
+  .dark .btn-secondary:hover, .dark .btn-icon:hover { background: #181818 !important; border-color: #444444 !important; color: #ffffff !important; }
+  .dark .page-title, .dark .section-title { color: #f2f2f2; }
+  .dark .page-subtitle, .dark .section-subtitle { color: #9a9a9a; }
+  .dark .text-slate-950, .dark .text-slate-900 { color: #f2f2f2 !important; }
+  .dark .text-slate-800 { color: #dddddd !important; }
+  .dark .text-slate-700 { color: #c7c7c7 !important; }
+  .dark .text-slate-600, .dark .text-slate-500 { color: #9a9a9a !important; }
+  .dark .text-slate-400 { color: #737373 !important; }
+  .dark .border-slate-300, .dark .border-slate-200, .dark .border-slate-200\/80, .dark .border-slate-100 { border-color: #292929 !important; }
+  .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]), .dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #292929 !important; }
+  .dark .bg-white, .dark .bg-white\/95, .dark .bg-white\/90, .dark .bg-white\/80 { background-color: #111111 !important; }
+  .dark .bg-slate-50, .dark .bg-slate-50\/60, .dark .bg-slate-50\/80 { background-color: #0f0f0f !important; }
+  .dark .bg-slate-100 { background-color: #181818 !important; }
+  .dark .bg-slate-200 { background-color: #202020 !important; }
+  .dark .bg-indigo-50, .dark .bg-indigo-100, .dark .bg-blue-50, .dark .bg-blue-100, .dark .bg-purple-50, .dark .bg-violet-50, .dark .bg-cyan-50 { background-color: #171717 !important; }
+  .dark .bg-indigo-50\/70 { background-color: #151515 !important; }
+  .dark .bg-emerald-50 { background-color: #101b16 !important; }
+  .dark .bg-rose-50 { background-color: #1d1114 !important; }
+  .dark .bg-amber-50 { background-color: #1c180e !important; }
+  .dark .border-indigo-100, .dark .border-indigo-200, .dark .border-indigo-300, .dark .border-blue-100, .dark .border-blue-200, .dark .border-purple-200, .dark .border-violet-200 { border-color: #303030 !important; }
+  .dark .border-emerald-100, .dark .border-emerald-200 { border-color: #214536 !important; }
+  .dark .border-rose-100, .dark .border-rose-200 { border-color: #4a252c !important; }
+  .dark .text-indigo-950, .dark .text-indigo-900, .dark .text-indigo-800, .dark .text-indigo-700, .dark .text-indigo-600, .dark .text-indigo-500, .dark .text-blue-900, .dark .text-blue-800, .dark .text-blue-700, .dark .text-blue-600, .dark .text-blue-500, .dark .text-purple-700, .dark .text-violet-700 { color: #b8b8b8 !important; }
+  .dark .text-emerald-900, .dark .text-emerald-800, .dark .text-emerald-700 { color: #6ee7b7 !important; }
+  .dark .text-rose-900, .dark .text-rose-800, .dark .text-rose-700, .dark .text-rose-600 { color: #fb7185 !important; }
+  .dark .text-amber-900, .dark .text-amber-800, .dark .text-amber-700 { color: #fcd34d !important; }
+  .dark .hover\:bg-slate-50:hover, .dark .hover\:bg-white:hover, .dark .hover\:bg-indigo-50:hover { background-color: #181818 !important; }
+  .dark .shadow-sm, .dark .shadow, .dark .shadow-lg, .dark .shadow-xl, .dark .shadow-2xl { --tw-shadow-color: rgba(0,0,0,.38) !important; }
+  .dark .bg-slate-950 { background-color: #050505 !important; }
+  .dark .ring-indigo-300, .dark .ring-indigo-400, .dark .ring-blue-300 { --tw-ring-color: #404040 !important; }
+  .dark ::selection { background: #333333 !important; color: #ffffff !important; }
+  /* Decorative gradients become quiet charcoal surfaces in dark mode. */
+  .dark [class*="bg-gradient-"] { background-image: none !important; }
+  .dark .from-brand-500, .dark .from-indigo-50, .dark .from-indigo-100, .dark .from-amber-50, .dark .from-rose-50 { background-color: #111111 !important; }
+  .dark .to-purple-600, .dark .to-violet-50, .dark .to-white, .dark .to-orange-50 { background-color: #111111 !important; }
+  .dark .via-white { background-color: #111111 !important; }
+  .dark .bg-white\/15, .dark .bg-white\/10, .dark .bg-white\/5 { background-color: rgba(255,255,255,.06) !important; }
 }
 
 @media (max-width: 639px) {
