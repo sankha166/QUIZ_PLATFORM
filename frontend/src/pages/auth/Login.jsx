@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel — Decorative */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'var(--brand-gradient)' }}>
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #4f46e5 100%)' }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(255,255,255,0.15),transparent)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.1),transparent)]" />
 
