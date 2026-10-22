@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Bell, BarChart3, ChevronLeft, ChevronRight, FileQuestion, FolderKanban, LayoutDashboard, LogOut, Menu, Radio, Search, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart3, ChevronLeft, ChevronRight, FileQuestion, FolderKanban, LayoutDashboard, LogOut, Menu, Moon, Radio, Search, Sun, Users, X } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import NotificationBell from '../common/NotificationBell';
+import { useTheme } from '../../context/ThemeContext';
 
 const navItems = [
   ['/admin/dashboard', 'Dashboard', LayoutDashboard],
@@ -17,6 +19,7 @@ const isPathActive = (pathname, path) => pathname === path || pathname.startsWit
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -29,6 +32,22 @@ export default function AdminLayout({ children }) {
   };
 
   const closeMobile = () => setMobileOpen(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   const goToAdminRoute = (event, path) => {
     // Keep admin navigation inside the SPA. This also prevents an accidental
@@ -58,12 +77,12 @@ export default function AdminLayout({ children }) {
       <div className={`${sidebarOpen ? 'lg:pl-[240px]' : 'lg:pl-[72px]'} min-w-0`}>
         <header className="glass-header sticky top-0 z-40">
           <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-3 sm:h-[68px] sm:px-6 lg:px-7">
-            <button type="button" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMobileOpen(v => !v)} className="btn-icon lg:hidden">{mobileOpen ? <X size={18} strokeWidth={1.8} /> : <Menu size={18} strokeWidth={1.8} />}</button>
+            <button type="button" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={mobileOpen} onClick={() => setMobileOpen(v => !v)} className="btn-icon relative z-[70] lg:hidden">{mobileOpen ? <X size={18} strokeWidth={1.8} /> : <Menu size={18} strokeWidth={1.8} />}</button>
             <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Admin</p><h1 className="truncate text-[15px] font-semibold tracking-[-.01em] text-slate-800 sm:text-base">{current?.[1] || 'Dashboard'}</h1></div>
-            <div className="ml-auto flex items-center gap-1.5 sm:gap-2"><label className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 lg:flex"><Search size={15} className="text-slate-400" strokeWidth={1.8} /><input type="search" placeholder="Search" className="w-40 bg-transparent text-[13px] outline-none placeholder:text-slate-400" /></label><button type="button" aria-label="Notifications" className="btn-icon"><Bell size={17} strokeWidth={1.8} /></button><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-1.5 py-1.5 shadow-sm sm:px-2"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{user?.name?.charAt(0)?.toUpperCase()}</div><div className="hidden sm:block"><p className="max-w-36 truncate text-xs font-semibold text-slate-800">{user?.name}</p><p className="max-w-36 truncate text-[10px] text-slate-500">{user?.email}</p></div></div></div>
+            <div className="ml-auto flex items-center gap-1.5 sm:gap-2"><label className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 lg:flex"><Search size={15} className="text-slate-400" strokeWidth={1.8} /><input type="search" placeholder="Search" className="w-40 bg-transparent text-[13px] outline-none placeholder:text-slate-400" /></label><NotificationBell /><button type="button" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggleTheme} className="btn-icon border-transparent bg-transparent shadow-none hover:bg-slate-100 dark:hover:bg-slate-800">{theme === 'dark' ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}</button><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-1.5 py-1.5 shadow-sm sm:px-2"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{user?.name?.charAt(0)?.toUpperCase()}</div><div className="hidden sm:block"><p className="max-w-36 truncate text-xs font-semibold text-slate-800">{user?.name}</p><p className="max-w-36 truncate text-[10px] text-slate-500">{user?.email}</p></div></div></div>
           </div>
-          {mobileOpen && <><button aria-label="Close navigation" onClick={closeMobile} className="fixed inset-0 top-16 z-40 bg-slate-950/30 lg:hidden" /><aside className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,320px)] flex-col border-r border-slate-200 bg-white shadow-2xl lg:hidden dark:border-slate-800 dark:bg-slate-900"><div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800"><NavLink to="/admin/dashboard" onClick={closeMobile} className="flex items-center gap-3"><img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-[10px] object-cover" /><div><p className="text-sm font-semibold text-slate-900 dark:text-white">Quizora</p><p className="text-[10px] text-slate-400">Admin console</p></div></NavLink><button type="button" aria-label="Close navigation" onClick={closeMobile} className="btn-icon"><X size={18} strokeWidth={1.8} /></button></div><nav className="min-h-0 flex-1 overflow-y-auto p-3"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Navigation</p><div className="space-y-1">{navItems.map(([path, label, Icon]) => { const active = isPathActive(location.pathname, path); return <NavLink key={path} to={path} onClick={(event) => goToAdminRoute(event, path)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-slate-100 dark:bg-slate-800'}`}><Icon size={18} strokeWidth={1.8} /></span><span>{label}</span></NavLink>; })}</div></nav><div className="shrink-0 border-t border-slate-200 p-3 dark:border-slate-800"><button type="button" onClick={logoutUser} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-500/10"><LogOut size={18} strokeWidth={1.8} /></span>Logout</button></div></aside></>}
         </header>
+        {mobileOpen && <div className="fixed inset-0 z-[60] lg:hidden"><button type="button" aria-label="Close navigation" onClick={closeMobile} className="absolute inset-0 bg-slate-950/30 backdrop-blur-[1px]" /><aside aria-label="Mobile admin navigation" className="absolute left-0 top-0 flex h-full w-[min(86vw,320px)] flex-col border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"><div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800"><NavLink to="/admin/dashboard" onClick={closeMobile} className="flex items-center gap-3"><img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-[10px] object-cover" /><div><p className="text-sm font-semibold text-slate-900 dark:text-white">Quizora</p><p className="text-[10px] text-slate-400">Admin console</p></div></NavLink><button type="button" aria-label="Close navigation" onClick={closeMobile} className="btn-icon"><X size={18} strokeWidth={1.8} /></button></div><nav className="min-h-0 flex-1 overflow-y-auto p-3"><p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Navigation</p><div className="space-y-1">{navItems.map(([path, label, Icon]) => { const active = isPathActive(location.pathname, path); return <NavLink key={path} to={path} onClick={(event) => goToAdminRoute(event, path)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-slate-100 dark:bg-slate-800'}`}><Icon size={18} strokeWidth={1.8} /></span><span>{label}</span></NavLink>; })}</div></nav><div className="shrink-0 border-t border-slate-200 p-3 dark:border-slate-800"><button type="button" onClick={logoutUser} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-500/10"><LogOut size={18} strokeWidth={1.8} /></span>Logout</button></div></aside></div>}
         <main className="mx-auto w-full max-w-[1400px] p-3 sm:p-5 lg:p-7">{children}</main>
       </div>
     </div>
