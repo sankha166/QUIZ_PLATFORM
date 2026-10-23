@@ -1,22 +1,53 @@
 const { PDFParse } = require('pdf-parse');
 const mammoth = require('mammoth');
 
+const MAX_CHUNK_LENGTH = 18000;
+
 async function extractText({ text, file }) {
-  if (text && text.trim()) return text.trim();
-  if (!file?.buffer) throw Object.assign(new Error('Paste content or upload a document.'), { status: 400 });
+  if (text && text.trim()) return normalizeText(text);
+  if (!file?.buffer) {
+    throw Object.assign(new Error('Paste content or upload a document.'), { status: 400 });
+  }
 
   const type = (file.mimetype || '').toLowerCase();
-  if (type.includes('pdf')) {
+  if (type.includes('pdf') || /\.pdf$/i.test(file.originalname || '')) {
     const parser = new PDFParse({ data: file.buffer });
-    try { return (await parser.getText()).text.trim(); } finally { await parser.destroy(); }
+    try {
+      return normalizeText((await parser.getText()).text);
+    } finally {
+      await parser.destroy();
+    }
   }
   if (type.includes('word') || type.includes('officedocument.wordprocessingml')) {
-    return (await mammoth.extractRawText({ buffer: file.buffer })).value.trim();
+    return normalizeText((await mammoth.extractRawText({ buffer: file.buffer })).value);
   }
   if (type.includes('text') || /\.(txt|md)$/i.test(file.originalname || '')) {
-    return file.buffer.toString('utf8').trim();
+    return normalizeText(file.buffer.toString('utf8'));
   }
   throw Object.assign(new Error('Supported files: PDF, DOC, DOCX, TXT, MD.'), { status: 400 });
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .replace(/\u0000/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function splitSource(source) {
+  if (source.length <= MAX_CHUNK_LENGTH) return [source];
+  const chunks = [];
+  let remaining = source;
+  while (remaining.length > MAX_CHUNK_LENGTH) {
+    let cut = remaining.lastIndexOf('\n', MAX_CHUNK_LENGTH);
+    if (cut < MAX_CHUNK_LENGTH * 0.55) cut = MAX_CHUNK_LENGTH;
+    chunks.push(remaining.slice(0, cut).trim());
+    remaining = remaining.slice(cut).trim();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
 }
 
 function cleanJson(text) {
@@ -28,18 +59,54 @@ function cleanJson(text) {
   return value;
 }
 
-async function importQuestions({ text, file }) {
-  const source = await extractText({ text, file });
-  if (!source) throw Object.assign(new Error('No readable text found.'), { status: 400 });
+function normalizeQuestions(parsed) {
+  const candidates = Array.isArray(parsed) ? parsed : parsed?.questions;
+  if (!Array.isArray(candidates)) return [];
+  return candidates
+    .filter((q) => q && String(q.question_text || q.question || '').trim() && Array.isArray(q.options))
+    .map((q) => ({
+      question_text: String(q.question_text || q.question).trim(),
+      marks: Number(q.marks) || 1,
+      difficulty: q.difficulty ? String(q.difficulty).toLowerCase() : undefined,
+      explanation: q.explanation ? String(q.explanation).trim() : '',
+      options: q.options
+        .map((o) => ({
+          option_text: String(o.option_text || o.text || o.option || '').trim(),
+          is_correct: o.is_correct === true || o.correct === true || o.isCorrect === true,
+        }))
+        .filter((o) => o.option_text),
+    }))
+    .filter((q) => q.options.length >= 2)
+    .map((q) => {
+      const correct = q.options.find((option) => option.is_correct);
+      if (!q.explanation && correct) {
+        q.explanation = `The correct answer is "${correct.option_text}". This is the option identified by the authoritative answer information in the supplied material.`;
+      }
+      return q;
+    });
+}
 
-  // GEMINI_API_KEY is preferred. OPENAI_API_KEY is accepted as a backwards-
-  // compatible fallback because earlier versions of this project documented
-  // that variable even when the value is actually a Gemini API key.
-  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY;
-  if (!key) throw Object.assign(new Error('Set GEMINI_API_KEY in the backend Railway service environment variables.'), { status: 503 });
+async function extractChunk({ source, sharedAnswerKey, key, model, chunkNumber, totalChunks }) {
+  const prompt = `Extract every multiple-choice question from chunk ${chunkNumber} of ${totalChunks} of the supplied educational/PYQ document.
+Return ONLY valid JSON in this exact shape:
+{"questions":[{"question_text":"...","marks":1,"difficulty":"easy|medium|hard","options":[{"option_text":"...","is_correct":false}],"explanation":"..."}]}
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const prompt = `Extract every multiple-choice question from the educational/PYQ content below.\nReturn ONLY JSON in this exact shape: {"questions":[{"question_text":"...","marks":1,"options":[{"option_text":"...","is_correct":false}],"explanation":"..."}]}.\nPreserve the original order and wording as closely as possible. Include every option. Determine the correct answer only from an explicit answer key, answer label, or explanation in the supplied content; never invent an answer. If the source has no determinable answer, keep the question and set every option is_correct=false. Copy the explanation when present; otherwise use an empty string. Never put answer labels or explanations into question_text.\n\nSOURCE:\n${source}`;
+Rules:
+- Preserve question order and wording as closely as possible.
+- Include exactly the options visibly present in the source; do not invent options.
+- A question is valid when it has at least two options. Keep four options when four are present.
+- Determine the correct answer only from an explicit answer key, answer label, or explanation in the supplied content. Never guess.
+- If no authoritative answer is present, keep the question and set every is_correct value to false so an administrator can verify it before saving.
+- An explanation is REQUIRED for every question. If the source includes an explanation, preserve its meaning. Otherwise, write a concise, self-contained explanation (one to three sentences) that explains why the explicitly correct option is correct and, when useful, why the other options are not. Base it only on the question, its options, and the authoritative answer; never invent facts.
+- Never return an empty, null, or placeholder explanation such as "N/A", "not provided", or "the correct answer is the option above".
+- Do not put answer keys or explanations in question_text.
+- Do not omit questions because the answer key is in another chunk.
+
+SHARED ANSWER KEY (use it when matching numbered questions):
+${sharedAnswerKey || 'No separate answer key was detected in the supplied text.'}
+
+SOURCE CHUNK:
+${source}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
   let response;
@@ -49,7 +116,11 @@ async function importQuestions({ text, file }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 16384,
+        },
       }),
     });
   } catch (err) {
@@ -64,29 +135,67 @@ async function importQuestions({ text, file }) {
     throw Object.assign(new Error(`Gemini request failed (${response.status}): ${detail}`), { status: 502 });
   }
 
-  const raw = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-  if (!raw) throw Object.assign(new Error('Gemini returned no question data. Check that GEMINI_API_KEY is valid and the selected model is available.'), { status: 502 });
+  const raw = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
+  if (!raw) return [];
+  try {
+    return normalizeQuestions(JSON.parse(cleanJson(raw)));
+  } catch (_) {
+    return [];
+  }
+}
 
-  let parsed;
-  try { parsed = JSON.parse(cleanJson(raw)); } catch (_) {
-    throw Object.assign(new Error('Gemini returned invalid JSON. Try a smaller document or clearer question/answer format.'), { status: 502 });
+function deduplicateQuestions(questions) {
+  const seen = new Set();
+  return questions.filter((question) => {
+    const key = question.question_text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function importQuestions({ text, file }) {
+  const source = await extractText({ text, file });
+  if (!source) {
+    const message = file?.mimetype?.includes('pdf')
+      ? 'This PDF contains no selectable text. It may be scanned/image-only; upload a text-based PDF or paste the extracted text.'
+      : 'No readable text found.';
+    throw Object.assign(new Error(message), { status: 422 });
   }
 
-  const candidates = Array.isArray(parsed) ? parsed : parsed.questions;
-  const questions = (Array.isArray(candidates) ? candidates : [])
-    .filter((q) => q && String(q.question_text || '').trim() && Array.isArray(q.options))
-    .map((q) => ({
-      question_text: String(q.question_text).trim(),
-      marks: Number(q.marks) || 1,
-      explanation: q.explanation ? String(q.explanation).trim() : '',
-      options: q.options
-        .map((o) => ({ option_text: String(o.option_text || o.text || '').trim(), is_correct: Boolean(o.is_correct ?? o.correct) }))
-        .filter((o) => o.option_text),
-    }))
-    .filter((q) => q.options.length >= 2);
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY;
+  if (!key) {
+    throw Object.assign(new Error('Set GEMINI_API_KEY in the backend Railway service environment variables.'), { status: 503 });
+  }
 
-  if (!questions.length) throw Object.assign(new Error('No multiple-choice questions were detected in the supplied content.'), { status: 422 });
-  return { questions, source_length: source.length, detected: questions.length };
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const chunks = splitSource(source);
+  const answerKeyMatch = source.match(/(?:answer\s*key|correct\s*answers?|solutions?)\s*[:\-]([\s\S]{0,16000})/i);
+  const sharedAnswerKey = answerKeyMatch ? answerKeyMatch[1].trim() : '';
+  const extracted = [];
+  for (let index = 0; index < chunks.length; index += 1) {
+    extracted.push(...await extractChunk({
+      source: chunks[index],
+      sharedAnswerKey,
+      key,
+      model,
+      chunkNumber: index + 1,
+      totalChunks: chunks.length,
+    }));
+  }
+
+  const questions = deduplicateQuestions(extracted);
+  if (!questions.length) {
+    throw Object.assign(new Error(
+      'No multiple-choice questions were detected. Confirm the PDF has selectable text and uses visible question/options (for example, 1. Question, A. Option, B. Option).',
+    ), { status: 422 });
+  }
+  return {
+    questions,
+    source_length: source.length,
+    detected: questions.length,
+    chunks_processed: chunks.length,
+  };
 }
 
 module.exports = { importQuestions };

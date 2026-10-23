@@ -36,12 +36,23 @@ const normalizeIstTimestamp = (value) => {
   if (/[zZ]|[+-]\d{2}:\d{2}$/.test(text)) {
     const date = new Date(text);
     if (!Number.isNaN(date.getTime())) return date.toISOString();
-    return text;
+    return null;
   }
   const wall = text.slice(0, 19).replace('T', ' ');
   const date = new Date(`${wall.replace(' ', 'T')}+05:30`);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
+};
+
+const optionalTimestamp = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') return null;
+  const normalized = normalizeIstTimestamp(value);
+  if (!normalized) {
+    const error = new Error(`${fieldName} must be a valid date and time.`);
+    error.status = 400;
+    throw error;
+  }
+  return normalized;
 };
 
 const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds }) => {
@@ -50,7 +61,12 @@ const create = async ({ title, description, category_id, difficulty, duration, p
   if (live && !live_start_at) { const e = new Error('Live quiz requires a start time'); e.status = 400; throw e; }
   if (live && !live_all_domains && !catId) { const e = new Error('Select a category or choose All Domains'); e.status = 400; throw e; }
   const safeDuration = live ? 1 : Number(duration) || 10;
-  const startAt = live ? normalizeIstTimestamp(live_start_at) : null;
+  const startAt = live ? optionalTimestamp(live_start_at, 'Live start time') : null;
+  if (live && !startAt) {
+    const error = new Error('Live quiz requires a valid start time.');
+    error.status = 400;
+    throw error;
+  }
   const result = await query(`INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, status, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft',$9,$10,NULL,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`, [title, description || null, Number.isNaN(catId) ? null : catId, difficulty, safeDuration, passing_score || 60, max_attempts || 1, thumbnail_url || null, live, startAt, Boolean(live_all_domains), scoreValue(live_score_025, 2), scoreValue(live_score_050, 1.5), scoreValue(live_score_075, 1.25), scoreValue(live_score_100, 1), scoreValue(live_score_wrong, -0.5), live && Boolean(live_same_question_time), timeValue(live_question_time_seconds)]);
   return result.rows[0];
 };
@@ -70,8 +86,8 @@ const update = async (id, fields) => {
     if (key === 'is_live_quiz' || key === 'live_all_domains' || key === 'live_same_question_time') val = Boolean(val);
     if (key.startsWith('live_score_')) val = scoreValue(val, 0);
     if (key === 'live_question_time_seconds') val = timeValue(val);
-    if (key === 'live_start_at') val = normalizeIstTimestamp(val);
-    if (key === 'live_end_at' && current.rows[0].is_live_quiz) val = null;
+    if (key === 'live_start_at') val = optionalTimestamp(val, 'Live start time');
+    if (key === 'live_end_at') val = optionalTimestamp(val, 'Live end time');
     updates.push(`${key} = $${idx}`);
     params.push(val);
     idx++;

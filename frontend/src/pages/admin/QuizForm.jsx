@@ -183,14 +183,19 @@ export default function QuizForm() {
         category_name: selected?.name || "All Categories",
         is_live_quiz: Boolean(isLive),
         live_all_domains: Boolean(allDomains),
-        live_start_at: liveStart,
-        live_end_at: null,
         live_same_question_time: Boolean(form.live_same_question_time),
         live_question_time_seconds: Math.min(
           600,
           Math.max(5, Number(form.live_question_time_seconds) || 30),
         ),
       };
+      if (isLive) {
+        data.live_start_at = liveStart;
+        data.live_end_at = null;
+      } else {
+        delete data.live_start_at;
+        delete data.live_end_at;
+      }
       if (isEdit) await updateQuiz(id, data);
       else await createQuiz(data);
       navigate(isLive ? "/admin/live-quizzes" : "/admin/quizzes");

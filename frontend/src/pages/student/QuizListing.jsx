@@ -15,7 +15,8 @@ import { difficultyColor } from "../../utils/helpers";
 import { useAuth } from "../../hooks/useAuth";
 
 function getShareUrl(quiz) {
-  return `${window.location.origin}/student/quizzes/${quiz.id}`;
+  const apiBase = String(import.meta.env.VITE_API_BASE || "/api").trim().replace(/\/$/, "");
+  return `${apiBase}/quizzes/share/${quiz.id}`;
 }
 function getShareText(quiz) {
   const description = quiz.description?.trim();

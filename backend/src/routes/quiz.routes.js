@@ -9,6 +9,7 @@ const validate = require('../middleware/validate');
 // Use optional auth so admin users get their role recognized (to see drafts/unpublished),
 // while unauthenticated visitors still get the public published-only listing.
 router.get('/', optionalAuth, ctrl.getAll);
+router.get('/share/:id', ctrl.share);
 router.get('/:id', authenticate, ctrl.getById);
 
 router.post('/',

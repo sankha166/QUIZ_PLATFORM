@@ -39,6 +39,16 @@ export default function AIQuestionImport() {
     setSaving(true);
     setError("");
     try {
+      const invalid = questions.findIndex(
+        (q) =>
+          !q.explanation?.trim() ||
+          q.options?.filter((option) => option.is_correct).length !== 1,
+      );
+      if (invalid >= 0) {
+        throw new Error(
+          `Question ${invalid + 1} needs exactly one verified correct answer and a non-empty explanation before it can be saved.`,
+        );
+      }
       for (const q of questions)
         await addQuestion(id, {
           question_text: q.question_text,
