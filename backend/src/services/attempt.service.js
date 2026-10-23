@@ -178,10 +178,10 @@ const getAttemptById = async (aid, uid) => {
             COALESCE(AVG(percentage),0)::numeric(5,2) average_percentage,
             COALESCE(AVG(time_taken),0)::numeric(10,1) average_time,
             COALESCE(MAX(percentage),0)::numeric(5,2) topper_percentage,
-            COUNT(*) FILTER (WHERE percentage>$3)::int attempts_ahead
+            COUNT(*) FILTER (WHERE percentage>$2)::int attempts_ahead
      FROM attempts
      WHERE quiz_id=$1 AND status IN ('passed','failed')`,
-    [attempt.quiz_id, attempt.id, attempt.percentage || 0],
+    [attempt.quiz_id, attempt.percentage || 0],
   );
   const topper = await query(
     `SELECT a.percentage,a.time_taken,u.name
