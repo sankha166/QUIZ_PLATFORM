@@ -6,6 +6,17 @@ import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/common/Badge";
 import { formatTime, formatDate, statusColor } from "../../utils/helpers";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 function qt(s) {
   s = Number(s) || 0;
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -59,6 +70,29 @@ export default function QuizResult() {
       fastest: t.length ? Math.min(...t) : 0,
     };
   }, [answers]);
+  const analysis = attempt?.analysis;
+  const comparison = analysis?.comparison || {};
+  const topper = analysis?.topper;
+  const questionStats = analysis?.questionStats || [];
+  const distribution = [
+    { name: "Correct", value: Number(attempt?.correct_answers) || 0, color: "#10b981" },
+    { name: "Incorrect", value: Number(attempt?.incorrect_answers) || 0, color: "#f43f5e" },
+    { name: "Skipped", value: Number(attempt?.unanswered) || 0, color: "#94a3b8" },
+  ].filter((item) => item.value > 0);
+  const questionChart = answers.map((answer, index) => {
+    const benchmark = questionStats.find((item) => String(item.question_id) === String(answer.question_id));
+    return {
+      name: `Q${index + 1}`,
+      time: Number(answer.time_taken) || 0,
+      average: Number(benchmark?.average_time) || 0,
+      result: answer.is_correct ? "Correct" : answer.selected_option_id ? "Incorrect" : "Skipped",
+    };
+  });
+  const rank = comparison.completed_attempts
+    ? Number(comparison.attempts_ahead || 0) + 1
+    : null;
+  const scoreDelta = Number(attempt?.percentage || 0) - Number(comparison.average_percentage || 0);
+  const timeDelta = Number(attempt?.time_taken || 0) - Number(comparison.average_time || 0);
   const filtered = useMemo(
     () =>
       answers
@@ -188,6 +222,50 @@ export default function QuizResult() {
             </div>
           </div>
         </div>
+        <section className="card overflow-hidden">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow text-indigo-600">Performance dashboard</p>
+              <h2 className="mt-1 text-xl font-bold sm:text-2xl">Your complete analysis</h2>
+              <p className="mt-1 text-sm text-slate-500">See accuracy, pace, question-level performance, and how you compare with everyone who attempted this quiz.</p>
+            </div>
+            {rank && <div className="rounded-2xl bg-indigo-50 px-4 py-3 text-center dark:bg-indigo-500/10"><p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600">Your rank</p><p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">#{rank}<span className="text-sm font-medium text-slate-500"> / {comparison.completed_attempts}</span></p></div>}
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              ["Quiz average", `${Number(comparison.average_percentage || 0).toFixed(1)}%`, scoreDelta >= 0 ? `+${scoreDelta.toFixed(1)}% above average` : `${Math.abs(scoreDelta).toFixed(1)}% below average`, scoreDelta >= 0 ? "text-emerald-600" : "text-rose-600"],
+              ["Top score", `${Number(comparison.topper_percentage || 0).toFixed(1)}%`, topper?.name ? `By ${topper.name}` : "Best recorded score", "text-amber-600"],
+              ["Your pace", formatTime(attempt.time_taken), timeDelta <= 0 ? "Faster than quiz average" : `${formatTime(timeDelta)} slower than average`, timeDelta <= 0 ? "text-emerald-600" : "text-amber-600"],
+              ["Avg. response", qt(stats.avg), `${answers.length} questions analysed`, "text-indigo-600"],
+            ].map(([label, value, detail, color]) => <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50"><p className="text-xs text-slate-500">{label}</p><p className={`mt-1 text-xl font-black ${color}`}>{value}</p><p className="mt-1 text-[11px] leading-4 text-slate-500">{detail}</p></div>)}
+          </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
+            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+              <h3 className="font-semibold">Answer distribution</h3>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="h-40 w-40 shrink-0">
+                  {distribution.length ? <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius={45} outerRadius={68} paddingAngle={3}>{distribution.map((item) => <Cell key={item.name} fill={item.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-xs text-slate-400">No answers recorded</div>}
+                </div>
+                <div className="space-y-2 text-sm">{distribution.map((item) => <div key={item.name} className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} /><span className="text-slate-500">{item.name}</span><strong className="ml-auto">{item.value}</strong></div>)}</div>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold">Response time by question</h3><p className="text-xs text-slate-500">Your time compared with the quiz average</p></div><span className="text-[11px] text-slate-400">seconds</span></div>
+              <div className="mt-3 h-40 min-w-0">
+                {questionChart.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={questionChart} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value) => [`${value}s`]} /><Bar dataKey="time" name="Your time" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="average" name="Quiz average" fill="#cbd5e1" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-xs text-slate-400">Timing data will appear here</div>}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+            <h3 className="font-semibold">Personal recommendations</h3>
+            <ul className="mt-2 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
+              <li>• {attempt.incorrect_answers ? `Review the ${attempt.incorrect_answers} missed question${attempt.incorrect_answers === 1 ? "" : "s"} and read each explanation.` : "Excellent accuracy — challenge yourself with a harder quiz next."}</li>
+              <li>• {attempt.unanswered ? `Try to answer every question; ${attempt.unanswered} were left unanswered this time.` : "You attempted every question — keep this level of completion."}</li>
+              <li>• {stats.avg > 0 && comparison.average_time ? (timeDelta <= 0 ? "Your pace is strong. Preserve accuracy while answering quickly." : "Leave a little more time for difficult questions before submitting.") : "Your response-time insights will improve as more attempts are recorded."}</li>
+              <li>• {rank === 1 ? "You are currently the topper for this quiz — outstanding work!" : topper ? `The current topper is ${topper.name}; use the question review below to close the gap.` : "Complete more attempts to unlock richer peer comparisons."}</li>
+            </ul>
+          </div>
+        </section>
         <section className="card">
           <div className="flex flex-col gap-4">
             <div>
