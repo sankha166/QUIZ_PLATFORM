@@ -15,6 +15,17 @@ export default function AIQuestionImport() {
     [busy, setBusy] = useState(false),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
+  const setQuestionImage = (index, file, field) => {
+    if (!file?.type?.startsWith("image/")) return setError("Please choose an image file.");
+    if (file.size > 4 * 1024 * 1024) return setError("Images must be smaller than 4 MB.");
+    const reader = new FileReader();
+    reader.onload = () => setQuestions((current) => current.map((q, i) => i === index ? { ...q, [field]: String(reader.result) } : q));
+    reader.readAsDataURL(file);
+  };
+  const pasteQuestionImage = (event, index, field) => {
+    const item = [...(event.clipboardData?.items || [])].find((entry) => entry.type.startsWith("image/"));
+    if (item) { event.preventDefault(); setQuestionImage(index, item.getAsFile(), field); }
+  };
   const run = async () => {
     setError("");
     setBusy(true);
@@ -55,6 +66,8 @@ export default function AIQuestionImport() {
           marks: q.marks || 1,
           difficulty: q.difficulty || null,
           explanation: q.explanation || "",
+          question_image_url: q.question_image_url || "",
+          explanation_image_url: q.explanation_image_url || "",
           options: q.options,
         });
       nav(`/admin/quizzes/${id}`);
@@ -124,9 +137,15 @@ export default function AIQuestionImport() {
               </button>
             </div>
             {questions.map((q, i) => (
-              <div key={i} className="card">
+              <div key={i} className="card" onPaste={(event) => pasteQuestionImage(event, i, "question_image_url")}>
                 <div className="font-medium">
                   {i + 1}. {q.question_text}
+                </div>
+                {q.question_image_url && <img src={q.question_image_url} alt="Question diagram" className="mt-3 max-h-56 rounded-xl border object-contain" />}
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span>Paste an image here, or add a diagram:</span>
+                  <input type="file" accept="image/*" onChange={(event) => setQuestionImage(i, event.target.files?.[0], "question_image_url")} />
+                  {q.question_image_url && <button type="button" className="text-rose-600" onClick={() => setQuestions((current) => current.map((item, index) => index === i ? { ...item, question_image_url: "" } : item))}>Remove question image</button>}
                 </div>
                 <div className="mt-3 grid gap-2">
                   {q.options.map((o, j) => (
@@ -149,6 +168,12 @@ export default function AIQuestionImport() {
                 {q.explanation && (
                   <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
                     <b>Explanation:</b> {q.explanation}
+                    {q.explanation_image_url && <img src={q.explanation_image_url} alt="Explanation diagram" className="mt-2 max-h-48 rounded-lg border object-contain" />}
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500" onPaste={(event) => pasteQuestionImage(event, i, "explanation_image_url")}>
+                      <span>Add explanation diagram:</span>
+                      <input type="file" accept="image/*" onChange={(event) => setQuestionImage(i, event.target.files?.[0], "explanation_image_url")} />
+                      {q.explanation_image_url && <button type="button" className="text-rose-600" onClick={() => setQuestions((current) => current.map((item, index) => index === i ? { ...item, explanation_image_url: "" } : item))}>Remove image</button>}
+                    </div>
                   </div>
                 )}
               </div>

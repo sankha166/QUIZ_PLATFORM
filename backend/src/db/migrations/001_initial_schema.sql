@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS questions (
   question_text TEXT NOT NULL,
   marks         INTEGER NOT NULL DEFAULT 1 CHECK (marks > 0),
   explanation   TEXT,
+  question_image_url TEXT,
+  explanation_image_url TEXT,
   difficulty    VARCHAR(10) CHECK (difficulty IN ('easy','medium','hard')),
   created_at    TIMESTAMP DEFAULT NOW()
 );

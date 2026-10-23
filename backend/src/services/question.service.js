@@ -24,13 +24,13 @@ const resolveLiveTime = async (quizId, requested) => {
   return Math.min(600, Math.max(5, Number(requested) || 30));
 };
 
-const add = async (quizId, { question_text, marks, explanation, difficulty, time_limit_seconds, options }) => {
+const add = async (quizId, { question_text, marks, explanation, difficulty, time_limit_seconds, question_image_url, explanation_image_url, options }) => {
   validate(options);
   const client = await getClient();
   try {
     await client.query('BEGIN');
     const liveTime = await resolveLiveTime(quizId, time_limit_seconds);
-    const qr = await client.query(`INSERT INTO questions(quiz_id,question_text,marks,explanation,difficulty,time_limit_seconds) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [quizId, question_text, marks || 1, explanation || null, difficulty || null, liveTime]);
+    const qr = await client.query(`INSERT INTO questions(quiz_id,question_text,marks,explanation,difficulty,time_limit_seconds,question_image_url,explanation_image_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [quizId, question_text, marks || 1, explanation || null, difficulty || null, liveTime, question_image_url || null, explanation_image_url || null]);
     const question = qr.rows[0], inserted = [];
     for (const o of options) { const r = await client.query('INSERT INTO options(question_id,option_text,is_correct) VALUES($1,$2,$3) RETURNING *', [question.id, o.option_text, o.is_correct || false]); inserted.push(r.rows[0]); }
     await client.query('COMMIT');
@@ -38,14 +38,14 @@ const add = async (quizId, { question_text, marks, explanation, difficulty, time
   } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
 };
 
-const update = async (id, { question_text, marks, explanation, difficulty, time_limit_seconds, options }) => {
+const update = async (id, { question_text, marks, explanation, difficulty, time_limit_seconds, question_image_url, explanation_image_url, options }) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
     const existing = await client.query('SELECT quiz_id FROM questions WHERE id=$1', [id]);
     if (!existing.rows.length) { const e = new Error('Question not found'); e.status = 404; throw e; }
     const liveTime = await resolveLiveTime(existing.rows[0].quiz_id, time_limit_seconds);
-    const qr = await client.query(`UPDATE questions SET question_text=COALESCE($1,question_text),marks=COALESCE($2,marks),explanation=COALESCE($3,explanation),difficulty=COALESCE($4,difficulty),time_limit_seconds=COALESCE($5,time_limit_seconds) WHERE id=$6 RETURNING *`, [question_text, marks, explanation, difficulty, liveTime, id]);
+    const qr = await client.query(`UPDATE questions SET question_text=COALESCE($1,question_text),marks=COALESCE($2,marks),explanation=COALESCE($3,explanation),difficulty=COALESCE($4,difficulty),time_limit_seconds=COALESCE($5,time_limit_seconds),question_image_url=CASE WHEN $6::text IS NULL THEN question_image_url ELSE NULLIF($6,'') END,explanation_image_url=CASE WHEN $7::text IS NULL THEN explanation_image_url ELSE NULLIF($7,'') END WHERE id=$8 RETURNING *`, [question_text, marks, explanation, difficulty, liveTime, question_image_url === undefined ? null : question_image_url, explanation_image_url === undefined ? null : explanation_image_url, id]);
     let inserted = [];
     if (options && options.length >= 2) {
       validate(options);

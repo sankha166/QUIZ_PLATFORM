@@ -156,7 +156,7 @@ const getAttemptById = async (aid, uid) => {
   const attempt = attemptResult.rows[0];
   const answerResult = await query(
     `SELECT q.id question_id,ans.id answer_id,ans.selected_option_id,ans.is_correct,
-            COALESCE(ans.time_taken,0) time_taken,q.question_text,q.explanation,q.marks,
+            COALESCE(ans.time_taken,0) time_taken,q.question_text,q.explanation,q.question_image_url,q.explanation_image_url,q.marks,
             sel.option_text selected_option_text,
             COALESCE((
               SELECT json_agg(

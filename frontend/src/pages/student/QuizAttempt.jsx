@@ -233,6 +233,9 @@ export default function QuizAttempt() {
               <p className="text-base sm:text-xl font-semibold leading-8 text-slate-900 break-words">
                 {question?.question_text}
               </p>
+              {question?.question_image_url && (
+                <img src={question.question_image_url} alt="Question diagram" className="mt-5 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
+              )}
               <div className="space-y-3 mt-7">
                 {question?.options?.map((opt, index) => (
                   <label

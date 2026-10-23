@@ -59,6 +59,21 @@ function cleanJson(text) {
   return value;
 }
 
+function truthyAnswer(value) {
+  return value === true || ['true', 'yes', 'correct', 'right', '1'].includes(String(value || '').trim().toLowerCase());
+}
+
+function answerIndex(value, optionCount) {
+  const text = String(value || '').trim().toUpperCase();
+  if (!text) return -1;
+  if (/^[A-Z]$/.test(text)) {
+    const index = text.charCodeAt(0) - 65;
+    return index >= 0 && index < optionCount ? index : -1;
+  }
+  const number = Number(text.replace(/^(OPTION|ANSWER)\s*/i, ''));
+  return Number.isInteger(number) && number >= 1 && number <= optionCount ? number - 1 : -1;
+}
+
 function normalizeQuestions(parsed) {
   const candidates = Array.isArray(parsed) ? parsed : parsed?.questions;
   if (!Array.isArray(candidates)) return [];
@@ -69,15 +84,23 @@ function normalizeQuestions(parsed) {
       marks: Number(q.marks) || 1,
       difficulty: q.difficulty ? String(q.difficulty).toLowerCase() : undefined,
       explanation: q.explanation ? String(q.explanation).trim() : '',
+      question_image_url: String(q.question_image_url || q.questionImageUrl || '').trim(),
+      explanation_image_url: String(q.explanation_image_url || q.explanationImageUrl || '').trim(),
+      answer: q.correct_answer ?? q.answer ?? q.correctAnswer ?? '',
       options: q.options
         .map((o) => ({
           option_text: String(o.option_text || o.text || o.option || '').trim(),
-          is_correct: o.is_correct === true || o.correct === true || o.isCorrect === true,
+          is_correct: truthyAnswer(o.is_correct ?? o.correct ?? o.isCorrect),
         }))
         .filter((o) => o.option_text),
     }))
     .filter((q) => q.options.length >= 2)
     .map((q) => {
+      const explicitIndex = answerIndex(q.answer, q.options.length);
+      if (explicitIndex >= 0) {
+        q.options = q.options.map((option, index) => ({ ...option, is_correct: index === explicitIndex }));
+      }
+      delete q.answer;
       const correct = q.options.find((option) => option.is_correct);
       if (!q.explanation && correct) {
         q.explanation = `The correct answer is "${correct.option_text}". This is the option identified by the authoritative answer information in the supplied material.`;
@@ -89,16 +112,18 @@ function normalizeQuestions(parsed) {
 async function extractChunk({ source, sharedAnswerKey, key, model, chunkNumber, totalChunks }) {
   const prompt = `Extract every multiple-choice question from chunk ${chunkNumber} of ${totalChunks} of the supplied educational/PYQ document.
 Return ONLY valid JSON in this exact shape:
-{"questions":[{"question_text":"...","marks":1,"difficulty":"easy|medium|hard","options":[{"option_text":"...","is_correct":false}],"explanation":"..."}]}
+{"questions":[{"question_text":"...","marks":1,"difficulty":"easy|medium|hard","correct_answer":"B","question_image_url":"","explanation_image_url":"","options":[{"option_text":"...","is_correct":false}],"explanation":"..."}]}
 
 Rules:
 - Preserve question order and wording as closely as possible.
 - Include exactly the options visibly present in the source; do not invent options.
 - A question is valid when it has at least two options. Keep four options when four are present.
 - Determine the correct answer only from an explicit answer key, answer label, or explanation in the supplied content. Never guess.
+- Return the answer label in correct_answer (for example A, B, C, or D) as well as marking that option is_correct=true. If the source has no authoritative answer, leave correct_answer empty and mark all options false.
 - If no authoritative answer is present, keep the question and set every is_correct value to false so an administrator can verify it before saving.
 - An explanation is REQUIRED for every question. If the source includes an explanation, preserve its meaning. Otherwise, write a concise, self-contained explanation (one to three sentences) that explains why the explicitly correct option is correct and, when useful, why the other options are not. Base it only on the question, its options, and the authoritative answer; never invent facts.
 - Never return an empty, null, or placeholder explanation such as "N/A", "not provided", or "the correct answer is the option above".
+- If the source explicitly provides an image/diagram URL, put it in question_image_url or explanation_image_url. Do not invent URLs. For embedded PDF images, describe the image in the explanation but leave the URL empty unless a usable URL is supplied.
 - Do not put answer keys or explanations in question_text.
 - Do not omit questions because the answer key is in another chunk.
 
@@ -170,7 +195,7 @@ async function importQuestions({ text, file }) {
 
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
   const chunks = splitSource(source);
-  const answerKeyMatch = source.match(/(?:answer\s*key|correct\s*answers?|solutions?)\s*[:\-]([\s\S]{0,16000})/i);
+  const answerKeyMatch = source.match(/(?:answer\s*key|answers?|correct\s*answers?|solutions?)\s*[:\-]([\s\S]{0,16000})/i);
   const sharedAnswerKey = answerKeyMatch ? answerKeyMatch[1].trim() : '';
   const extracted = [];
   for (let index = 0; index < chunks.length; index += 1) {
@@ -188,6 +213,15 @@ async function importQuestions({ text, file }) {
   if (!questions.length) {
     throw Object.assign(new Error(
       'No multiple-choice questions were detected. Confirm the PDF has selectable text and uses visible question/options (for example, 1. Question, A. Option, B. Option).',
+    ), { status: 422 });
+  }
+  const incomplete = questions.findIndex((question) => (
+    question.options.filter((option) => option.is_correct).length !== 1 ||
+    !question.explanation.trim()
+  ));
+  if (incomplete >= 0) {
+    throw Object.assign(new Error(
+      `Question ${incomplete + 1} has no verified correct answer and complete explanation. Include the official answer key in the pasted text, then try again.`,
     ), { status: 422 });
   }
   return {

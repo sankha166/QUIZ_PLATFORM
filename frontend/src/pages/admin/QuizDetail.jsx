@@ -20,6 +20,8 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
   const [text, setText] = useState(question?.question_text || "");
   const [marks, setMarks] = useState(question?.marks || 1);
   const [explanation, setExplanation] = useState(question?.explanation || "");
+  const [questionImage, setQuestionImage] = useState(question?.question_image_url || "");
+  const [explanationImage, setExplanationImage] = useState(question?.explanation_image_url || "");
   const [time, setTime] = useState(question?.time_limit_seconds || 30);
   const [options, setOptions] = useState(
     question?.options?.length
@@ -31,6 +33,18 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const readImage = (file, setter) => {
+    if (!file?.type?.startsWith("image/")) return setError("Please choose an image file.");
+    if (file.size > 4 * 1024 * 1024) return setError("Images must be smaller than 4 MB.");
+    const reader = new FileReader();
+    reader.onload = () => setter(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+  const pasteImage = (event, setter) => {
+    const item = [...(event.clipboardData?.items || [])].find((entry) => entry.type.startsWith("image/"));
+    if (item) { event.preventDefault(); readImage(item.getAsFile(), setter); }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -48,6 +62,8 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
         question_text: text.trim(),
         marks: Number(marks) || 1,
         explanation: explanation.trim(),
+        question_image_url: questionImage,
+        explanation_image_url: explanationImage,
         time_limit_seconds: isLive ? Number(time) : null,
         options: valid.map((o) => ({
           option_text: o.text.trim(),
@@ -134,6 +150,20 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
             />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div onPaste={(event) => pasteImage(event, setQuestionImage)}>
+              <label className="label">Question diagram or image</label>
+              <input type="url" className="input mb-2" placeholder="Paste image URL or paste an image" value={questionImage.startsWith("data:") ? "" : questionImage} onChange={(e) => setQuestionImage(e.target.value)} />
+              <input type="file" accept="image/*" onChange={(e) => readImage(e.target.files?.[0], setQuestionImage)} className="w-full text-sm" />
+              {questionImage && <img src={questionImage} alt="Question preview" className="mt-2 max-h-28 rounded-lg border object-contain" />}
+            </div>
+            <div onPaste={(event) => pasteImage(event, setExplanationImage)}>
+              <label className="label">Explanation diagram or image</label>
+              <input type="url" className="input mb-2" placeholder="Paste image URL or paste an image" value={explanationImage.startsWith("data:") ? "" : explanationImage} onChange={(e) => setExplanationImage(e.target.value)} />
+              <input type="file" accept="image/*" onChange={(e) => readImage(e.target.files?.[0], setExplanationImage)} className="w-full text-sm" />
+              {explanationImage && <img src={explanationImage} alt="Explanation preview" className="mt-2 max-h-28 rounded-lg border object-contain" />}
+            </div>
           </div>
           <div>
             <label className="label">Options</label>
@@ -256,6 +286,8 @@ function AiImportModal({ quizId, isLive, onImported, onClose }) {
           explanation: item.explanation || "",
           difficulty: item.difficulty || null,
           time_limit_seconds: isLive ? item.time_limit_seconds : null,
+          question_image_url: item.question_image_url || "",
+          explanation_image_url: item.explanation_image_url || "",
           options,
         });
         saved++;
@@ -343,6 +375,13 @@ function AiImportModal({ quizId, isLive, onImported, onClose }) {
                   <p className="font-semibold">
                     Q{i + 1}. {q.question_text}
                   </p>
+                  {q.question_image_url && (
+                    <img
+                      src={q.question_image_url}
+                      alt={`Question ${i + 1} diagram`}
+                      className="mt-3 max-h-56 w-full rounded-xl border object-contain"
+                    />
+                  )}
                   {q.options?.length > 0 && (
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {q.options.map((o, j) => (
@@ -365,6 +404,13 @@ function AiImportModal({ quizId, isLive, onImported, onClose }) {
                     <p className="mt-2 text-sm text-slate-500">
                       {q.explanation}
                     </p>
+                  )}
+                  {q.explanation_image_url && (
+                    <img
+                      src={q.explanation_image_url}
+                      alt={`Question ${i + 1} explanation diagram`}
+                      className="mt-3 max-h-48 w-full rounded-xl border object-contain"
+                    />
                   )}
                 </div>
               ))}
@@ -557,6 +603,18 @@ export default function QuizDetail() {
                           </span>
                         )}
                       </div>
+                      {q.question_image_url && (
+                        <div className="mt-3 rounded-xl border border-indigo-100 bg-slate-50 p-2">
+                          <p className="mb-2 text-xs font-semibold text-slate-500">
+                            Question image
+                          </p>
+                          <img
+                            src={q.question_image_url}
+                            alt={`Question ${i + 1} diagram`}
+                            className="max-h-56 w-full rounded-lg object-contain"
+                          />
+                        </div>
+                      )}
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {q.options?.map((o) => (
                           <div
@@ -572,6 +630,18 @@ export default function QuizDetail() {
                         <p className="mt-3 text-sm text-slate-500">
                           <b>Explanation:</b> {q.explanation}
                         </p>
+                      )}
+                      {q.explanation_image_url && (
+                        <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-2">
+                          <p className="mb-2 text-xs font-semibold text-indigo-700">
+                            Explanation image
+                          </p>
+                          <img
+                            src={q.explanation_image_url}
+                            alt={`Question ${i + 1} explanation diagram`}
+                            className="max-h-56 w-full rounded-lg object-contain"
+                          />
+                        </div>
                       )}
                     </div>
                     <div className="flex shrink-0 gap-3 sm:self-start">

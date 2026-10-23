@@ -323,6 +323,9 @@ export default function QuizResult() {
                 <h3 className="text-base sm:text-lg font-semibold leading-7">
                   {currentAnswer.question_text}
                 </h3>
+                {currentAnswer.question_image_url && (
+                  <img src={currentAnswer.question_image_url} alt="Question diagram" className="mt-4 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
+                )}
                 <div className="mt-5 space-y-2">
                   {(currentAnswer.options || []).map((o, i) => {
                     const selected =
@@ -358,12 +361,17 @@ export default function QuizResult() {
                     );
                   })}
                 </div>
-                {currentAnswer.explanation && (
+                {(currentAnswer.explanation || currentAnswer.explanation_image_url) && (
                   <div className="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 p-4">
                     <b className="text-indigo-700">💡 Explanation</b>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {currentAnswer.explanation}
-                    </p>
+                    {currentAnswer.explanation && (
+                      <p className="mt-1 text-sm text-slate-600">
+                        {currentAnswer.explanation}
+                      </p>
+                    )}
+                    {currentAnswer.explanation_image_url && (
+                      <img src={currentAnswer.explanation_image_url} alt="Explanation diagram" className="mt-3 max-h-72 w-full rounded-xl border border-indigo-100 object-contain" />
+                    )}
                   </div>
                 )}
                 <div className="mt-6 flex gap-2">
