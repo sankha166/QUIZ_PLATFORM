@@ -51,7 +51,7 @@ export default function AttemptsList() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Quiz Attempts</h2>
             <p className="text-sm text-slate-500">Review individual student attempts and performance.</p>
@@ -66,7 +66,7 @@ export default function AttemptsList() {
             <EmptyState icon="📋" title="No attempts yet" description="There are no quiz attempts to display." />
           ) : (
             <>
-              <table className="w-full text-sm">
+              <table className="hidden w-full text-sm md:table">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     {['Student', 'Quiz', 'Score', 'Status', 'Date', 'Actions'].map((h) => (
@@ -90,6 +90,30 @@ export default function AttemptsList() {
                   ))}
                 </tbody>
               </table>
+              <div className="divide-y divide-slate-100 md:hidden">
+                {attempts.map((a) => (
+                  <article key={a.id} className="space-y-4 p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-slate-900">{a.student_name}</h3>
+                        <p className="break-all text-sm text-slate-500">{a.student_email}</p>
+                      </div>
+                      <Badge className={`shrink-0 ${statusColor(a.status)}`}>{a.status}</Badge>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-[0.15em] text-slate-400">Quiz</p>
+                      <p className="mt-1 break-words text-sm font-medium text-slate-700">{a.quiz_title}</p>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                      <div><dt className="text-xs text-slate-400">Score</dt><dd className="mt-0.5 font-semibold text-slate-900">{formatPercent(a.percentage)}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Date</dt><dd className="mt-0.5 text-slate-600">{formatDate(a.completed_at)}</dd></div>
+                    </dl>
+                    <div className="border-t border-slate-100 pt-3">
+                      <Link to={`/admin/attempts/${a.id}`} className="text-sm font-medium text-indigo-600 hover:underline">View attempt details</Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
               <div className="px-4 pb-4">
                 <Pagination page={page} total={total} limit={limit} onPageChange={setPage} />
               </div>

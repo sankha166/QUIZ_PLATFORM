@@ -101,44 +101,71 @@ export default function UserManagement() {
           ) : users.length === 0 ? (
             <EmptyState icon="👥" title="No students found" description="Try a different query or add new student accounts." />
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  {['Name', 'Email', 'Registered', 'Status', 'Attempts', 'Avg Score', 'Actions'].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-[0.2em]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-4 font-medium text-slate-900">{u.name}</td>
-                    <td className="px-4 py-4 text-slate-600">{u.email}</td>
-                    <td className="px-4 py-4 text-slate-500">{formatDate(u.created_at)}</td>
-                    <td className="px-4 py-4"><Badge className={u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}>{u.status}</Badge></td>
-                    <td className="px-4 py-4 text-slate-600">{u.quizzes_attempted}</td>
-                    <td className="px-4 py-4 text-slate-600">{formatPercent(u.average_score)}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <Link to={`/admin/users/${u.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">View</Link>
-                        <button
-                          onClick={() => toggleStatus(u)}
-                          className={`rounded-full px-3 py-1 text-xs ${u.status === 'active' ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
-                        >
-                          {u.status === 'active' ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(u)}
-                          className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+            <>
+              <table className="hidden w-full text-sm md:table">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    {['Name', 'Email', 'Registered', 'Status', 'Attempts', 'Avg Score', 'Actions'].map((h) => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-[0.2em]">{h}</th>
+                    ))}
                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {users.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4 font-medium text-slate-900">{u.name}</td>
+                      <td className="px-4 py-4 text-slate-600">{u.email}</td>
+                      <td className="px-4 py-4 text-slate-500">{formatDate(u.created_at)}</td>
+                      <td className="px-4 py-4"><Badge className={u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}>{u.status}</Badge></td>
+                      <td className="px-4 py-4 text-slate-600">{u.quizzes_attempted}</td>
+                      <td className="px-4 py-4 text-slate-600">{formatPercent(u.average_score)}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <Link to={`/admin/users/${u.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:bg-slate-100">View</Link>
+                          <button
+                            onClick={() => toggleStatus(u)}
+                            className={`rounded-full px-3 py-1 text-xs ${u.status === 'active' ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                          >
+                            {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(u)}
+                            className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="divide-y divide-slate-100 md:hidden">
+                {users.map((u) => (
+                  <article key={u.id} className="space-y-4 p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-slate-900">{u.name}</h3>
+                        <p className="break-all text-sm text-slate-600">{u.email}</p>
+                      </div>
+                      <Badge className={`shrink-0 ${u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{u.status}</Badge>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                      <div><dt className="text-xs text-slate-400">Registered</dt><dd className="mt-0.5 text-slate-600">{formatDate(u.created_at)}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Attempts</dt><dd className="mt-0.5 text-slate-600">{u.quizzes_attempted}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Average score</dt><dd className="mt-0.5 text-slate-600">{formatPercent(u.average_score)}</dd></div>
+                    </dl>
+                    <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                      <Link to={`/admin/users/${u.id}`} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100">View</Link>
+                      <button onClick={() => toggleStatus(u)} className={`rounded-full px-3 py-1.5 text-xs ${u.status === 'active' ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
+                        {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button onClick={() => setDeleteTarget(u)} className="rounded-full bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100">Delete</button>
+                    </div>
+                  </article>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
           {!loading && total > limit && (
             <div className="px-4 pb-4">
