@@ -16,6 +16,7 @@ import {
   Trophy,
   XCircle,
   Radio,
+  Flag,
 } from "lucide-react";
 const statStyles = {
   Students: ["bg-blue-50", "text-blue-600", "ring-blue-100"],
@@ -151,6 +152,9 @@ export default function AdminDashboard() {
             label="Failed"
             value={s.failedAttempts}
           />
+          <Link to="/admin/question-reports">
+            <StatCard icon={<Flag />} label="Open Reports" value={s.openReports} />
+          </Link>
         </div>
         <Link
           to="/admin/live-quizzes"

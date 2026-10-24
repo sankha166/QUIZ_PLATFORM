@@ -24,9 +24,13 @@ export default function QuizAttempt() {
     [autoSubmitting, setAutoSubmitting] = useState(false),
     [questionTimes, setQuestionTimes] = useState({}),
     [submitError, setSubmitError] = useState(""),
+    [shortSecondsLeft, setShortSecondsLeft] = useState(null),
+    [shortFeedback, setShortFeedback] = useState(null),
+    [markedQuestions, setMarkedQuestions] = useState({}),
     questionStarted = useRef(Date.now()),
     submittingRef = useRef(false),
-    questionsRef = useRef([]);
+    questionsRef = useRef([]),
+    answersRef = useRef({});
   useEffect(() => {
     if (!attemptData) {
       startQuiz(id)
@@ -39,7 +43,11 @@ export default function QuizAttempt() {
   }, [id]);
   useEffect(() => {
     questionStarted.current = Date.now();
-  }, [current]);
+    if (attemptData?.mode === "short") {
+      setShortSecondsLeft(Number(attemptData.perQuestionSeconds) || 30);
+      setShortFeedback(null);
+    }
+  }, [current, attemptData]);
   useEffect(() => {
     const block = (e) => e.preventDefault(),
       key = (e) => {
@@ -64,6 +72,7 @@ export default function QuizAttempt() {
   }, []);
   const questions = attemptData?.questions || [];
   questionsRef.current = questions;
+  answersRef.current = answers;
   const handleSubmit = useCallback(
     async (auto = false) => {
       if (submittingRef.current || !attemptData) return;
@@ -79,7 +88,7 @@ export default function QuizAttempt() {
         ...questionTimes,
         [current]: (questionTimes[current] || 0) + elapsed,
       };
-      const submittedAnswers = Object.entries(answers).map(
+      const submittedAnswers = Object.entries(answersRef.current).map(
         ([questionId, selectedOptionId]) => ({
           questionId: Number(questionId),
           selectedOptionId: Number(selectedOptionId),
@@ -89,6 +98,7 @@ export default function QuizAttempt() {
                 (q) => String(q.id) === String(questionId),
               )
             ] || 0,
+          marked: Boolean(markedQuestions[questionId]),
         }),
       );
       try {
@@ -111,7 +121,7 @@ export default function QuizAttempt() {
         );
       }
     },
-    [answers, attemptData, id, navigate, questionTimes, current],
+    [answers, attemptData, id, navigate, questionTimes, current, markedQuestions],
   );
   const { minutes, seconds, secondsLeft } = useTimer(
     attemptData?.expiryTime,
@@ -149,6 +159,26 @@ export default function QuizAttempt() {
   const question = questions[current],
     answered = Object.keys(answers).length,
     unanswered = questions.length - answered;
+  const optionStats = (attemptData.optionStats || []).filter((item) => String(item.question_id) === String(question?.id));
+  const selectAnswer = (optionId) => {
+    setAnswers((prev) => ({ ...prev, [question.id]: optionId }));
+    if (attemptData.mode === "short") {
+      const selected = optionStats.find((item) => String(item.option_id) === String(optionId));
+      const total = Number(selected?.total_selections) || 0;
+      setShortFeedback({
+        selected: optionId,
+        percentage: total ? Math.round((Number(selected.selections) / total) * 100) : null,
+      });
+      window.setTimeout(() => {
+        if (current < questions.length - 1) goTo(current + 1);
+        else handleSubmit(false);
+      }, 900);
+    }
+  };
+  const toggleMarked = () => {
+    if (attemptData.mode === "short") return;
+    setMarkedQuestions((previous) => ({ ...previous, [question.id]: !previous[question.id] }));
+  };
   const goTo = (next) => {
     const elapsed = Math.max(
       0,
@@ -160,6 +190,16 @@ export default function QuizAttempt() {
     }));
     setCurrent(next);
   };
+  useEffect(() => {
+    if (attemptData.mode !== "short" || shortSecondsLeft === null || shortFeedback) return undefined;
+    if (shortSecondsLeft <= 0) {
+      if (current < questions.length - 1) goTo(current + 1);
+      else handleSubmit(true);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setShortSecondsLeft((value) => Math.max(0, (value || 1) - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [attemptData.mode, shortSecondsLeft, shortFeedback, current, questions.length]);
   return (
     <div
       className="min-h-screen bg-slate-50 select-none"
@@ -178,11 +218,14 @@ export default function QuizAttempt() {
               Q {current + 1}/{questions.length}
             </p>
           </div>
+          <div className="flex items-center gap-2">
+          {attemptData.mode === "short" && <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">⚡ Short mode</span>}
           <div
             className={`shrink-0 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold ${secondsLeft !== null && secondsLeft < 60 ? "bg-red-100 text-red-600" : "bg-indigo-50 text-indigo-700"}`}
           >
             ⏱ {String(minutes ?? 0).padStart(2, "0")}:
             {String(seconds ?? 0).padStart(2, "0")}
+          </div>
           </div>
         </div>
       </header>
@@ -209,6 +252,11 @@ export default function QuizAttempt() {
                 <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                   Question {current + 1}
                 </span>
+                {attemptData.mode === "long" && (
+                  <button type="button" onClick={toggleMarked} className={`rounded-full px-3 py-1 text-xs font-bold ${markedQuestions[question.id] ? "bg-amber-200 text-amber-900" : "bg-slate-100 text-slate-500"}`}>
+                    {markedQuestions[question.id] ? "★ Marked for review" : "☆ Mark for review"}
+                  </button>
+                )}
                 <span className="text-xs text-slate-400">
                   Time:{" "}
                   {formatQuestionTime(
@@ -221,6 +269,7 @@ export default function QuizAttempt() {
                       ),
                   )}
                 </span>
+                {attemptData.mode === "short" && <span className={`rounded-full px-2 py-1 text-xs font-bold ${shortSecondsLeft !== null && shortSecondsLeft <= 5 ? "bg-red-100 text-red-700" : "bg-amber-50 text-amber-700"}`}>Question timer: {shortSecondsLeft}s</span>}
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full mb-6 overflow-hidden">
                 <div
@@ -252,12 +301,7 @@ export default function QuizAttempt() {
                       name={`q_${question.id}`}
                       value={opt.id}
                       checked={answers[question.id] == opt.id}
-                      onChange={() =>
-                        setAnswers((prev) => ({
-                          ...prev,
-                          [question.id]: opt.id,
-                        }))
-                      }
+                      onChange={() => selectAnswer(opt.id)}
                       className="sr-only"
                     />
                     <span className="text-sm sm:text-base text-slate-800 leading-6">
@@ -267,6 +311,11 @@ export default function QuizAttempt() {
                   </label>
                 ))}
               </div>
+              {attemptData.mode === "short" && shortFeedback && (
+                <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-800">
+                  {shortFeedback.percentage === null ? "No response distribution is available yet." : `This option was selected by ${shortFeedback.percentage}% of previous participants.`}
+                </div>
+              )}
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-7">
                 <button
                   type="button"
@@ -315,7 +364,7 @@ export default function QuizAttempt() {
                     key={q.id}
                     onClick={() => goTo(i)}
                     disabled={submitting}
-                    className={`aspect-square text-xs rounded-xl font-semibold ${i === current ? "bg-indigo-600 text-white" : answers[q.id] ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}
+                    className={`aspect-square text-xs rounded-xl font-semibold ${i === current ? "bg-indigo-600 text-white" : markedQuestions[q.id] ? "bg-amber-400 text-amber-950" : answers[q.id] ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}
                   >
                     {i + 1}
                   </button>
@@ -324,6 +373,7 @@ export default function QuizAttempt() {
               <div className="text-xs text-slate-500 space-y-2 mt-4">
                 <div>🟢 Answered ({answered})</div>
                 <div>⚪ Unanswered ({unanswered})</div>
+                {attemptData.mode === "long" && <div>🟡 Marked for review ({Object.values(markedQuestions).filter(Boolean).length})</div>}
               </div>
               <button
                 type="button"

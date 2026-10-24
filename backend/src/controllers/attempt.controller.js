@@ -2,7 +2,7 @@ const attemptService = require('../services/attempt.service');
 
 const start = async (req, res, next) => {
   try {
-    const data = await attemptService.start(req.params.quizId, req.user.id);
+    const data = await attemptService.start(req.params.quizId, req.user.id, req.body || {});
     res.status(201).json({ success: true, ...data });
   } catch (err) { next(err); }
 };

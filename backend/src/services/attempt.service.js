@@ -22,7 +22,7 @@ const domainCheck = async (qid, uid) => {
   }
 };
 
-const start = async (qid, uid) => {
+const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
   const result = await query(
     'SELECT q.*,c.domain_id FROM quizzes q LEFT JOIN categories c ON c.id=q.category_id WHERE q.id=$1 AND q.status=$2',
     [qid, 'published'],
@@ -33,6 +33,13 @@ const start = async (qid, uid) => {
     throw error;
   }
   const quiz = result.rows[0];
+  const selectedMode = mode === 'short' ? 'short' : 'long';
+  const questionCountResult = await query('SELECT COUNT(*)::int question_count FROM questions WHERE quiz_id=$1', [qid]);
+  const questionCount = questionCountResult.rows[0].question_count;
+  const standardSeconds = questionCount ? Math.max(5, Math.round((Number(quiz.duration) * 60) / questionCount)) : 30;
+  const questionSeconds = selectedMode === 'short'
+    ? Math.min(600, Math.max(5, Number(perQuestionSeconds) || standardSeconds))
+    : null;
   if (quiz.is_live_quiz) {
     const error = new Error('Live quizzes must be entered from Live Quizzes');
     error.status = 403;
@@ -40,16 +47,29 @@ const start = async (qid, uid) => {
   }
   await domainCheck(qid, uid);
   const inProgress = await query(
-    `SELECT id,expiry_time FROM attempts
+    `SELECT id,expiry_time,mode,per_question_seconds FROM attempts
      WHERE quiz_id=$1 AND user_id=$2 AND status='in_progress' AND expiry_time>NOW()`,
     [qid, uid],
   );
   if (inProgress.rows.length) {
+    const optionStats = await query(
+      `SELECT o.question_id,o.id option_id,COUNT(past.id)::int selections,
+              COALESCE(SUM(COUNT(past.id)) OVER (PARTITION BY o.question_id),0)::int total_selections
+       FROM options o
+       LEFT JOIN answers a ON a.selected_option_id=o.id
+       LEFT JOIN attempts past ON past.id=a.attempt_id AND past.status IN ('passed','failed')
+       WHERE o.question_id IN (SELECT id FROM questions WHERE quiz_id=$1)
+       GROUP BY o.question_id,o.id ORDER BY o.question_id,o.id`,
+      [qid],
+    );
     return {
       attemptId: inProgress.rows[0].id,
       questions: await questionService.getByQuiz(qid, false),
       expiryTime: inProgress.rows[0].expiry_time,
       quiz,
+      mode: inProgress.rows[0].mode || 'long',
+      perQuestionSeconds: inProgress.rows[0].per_question_seconds || null,
+      optionStats: optionStats.rows,
     };
   }
   const count = await query(
@@ -62,17 +82,33 @@ const start = async (qid, uid) => {
     error.status = 400;
     throw error;
   }
-  const expiry = new Date(Date.now() + quiz.duration * 60000);
+  const totalSeconds = selectedMode === 'short'
+    ? questionSeconds * Math.max(1, questionCount)
+    : Number(quiz.duration) * 60;
+  const expiry = new Date(Date.now() + totalSeconds * 1000);
   const created = await query(
-    `INSERT INTO attempts(quiz_id,user_id,status,expiry_time)
-     VALUES($1,$2,'in_progress',$3) RETURNING *`,
-    [qid, uid, expiry],
+    `INSERT INTO attempts(quiz_id,user_id,status,expiry_time,mode,per_question_seconds)
+     VALUES($1,$2,'in_progress',$3,$4,$5) RETURNING *`,
+    [qid, uid, expiry, selectedMode, questionSeconds],
+  );
+  const optionStats = await query(
+    `SELECT o.question_id,o.id option_id,COUNT(past.id)::int selections,
+            COALESCE(SUM(COUNT(past.id)) OVER (PARTITION BY o.question_id),0)::int total_selections
+     FROM options o
+     LEFT JOIN answers a ON a.selected_option_id=o.id
+     LEFT JOIN attempts past ON past.id=a.attempt_id AND past.status IN ('passed','failed')
+     WHERE o.question_id IN (SELECT id FROM questions WHERE quiz_id=$1)
+     GROUP BY o.question_id,o.id ORDER BY o.question_id,o.id`,
+    [qid],
   );
   return {
     attemptId: created.rows[0].id,
     questions: await questionService.getByQuiz(qid, false),
     expiryTime: created.rows[0].expiry_time,
     quiz,
+    mode: selectedMode,
+    perQuestionSeconds: questionSeconds,
+    optionStats: optionStats.rows,
   };
 };
 
@@ -184,7 +220,7 @@ const getAttemptById = async (aid, uid) => {
     [attempt.quiz_id, attempt.percentage || 0],
   );
   const topper = await query(
-    `SELECT a.percentage,a.time_taken,u.name
+    `SELECT a.percentage,a.time_taken,a.correct_answers,a.incorrect_answers,a.unanswered,u.name
      FROM attempts a JOIN users u ON u.id=a.user_id
      WHERE a.quiz_id=$1 AND a.status IN ('passed','failed')
      ORDER BY a.percentage DESC,a.time_taken ASC NULLS LAST,a.completed_at ASC
@@ -193,9 +229,9 @@ const getAttemptById = async (aid, uid) => {
   );
   const questionStats = await query(
     `SELECT q.id question_id,
-            COUNT(ans.id)::int response_count,
-            COUNT(ans.id) FILTER (WHERE ans.is_correct=TRUE)::int correct_count,
-            COALESCE(AVG(ans.time_taken),0)::numeric(10,1) average_time
+            COUNT(ans.id) FILTER (WHERE att.id IS NOT NULL)::int response_count,
+            COUNT(ans.id) FILTER (WHERE att.id IS NOT NULL AND ans.is_correct=TRUE)::int correct_count,
+            COALESCE(AVG(ans.time_taken) FILTER (WHERE att.id IS NOT NULL),0)::numeric(10,1) average_time
      FROM questions q
      LEFT JOIN answers ans ON ans.question_id=q.id
      LEFT JOIN attempts att ON att.id=ans.attempt_id

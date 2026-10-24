@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS attempts (
   expiry_time       TIMESTAMP NOT NULL,
   started_at        TIMESTAMP DEFAULT NOW(),
   completed_at      TIMESTAMP
+  ,mode             VARCHAR(10) NOT NULL DEFAULT 'long'
+  ,per_question_seconds INTEGER
 );
 
 -- Answers table
@@ -81,6 +83,7 @@ CREATE TABLE IF NOT EXISTS answers (
   question_id        INTEGER NOT NULL REFERENCES questions(id),
   selected_option_id INTEGER REFERENCES options(id),
   is_correct         BOOLEAN,
+  marked             BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (attempt_id, question_id)
 );
 
@@ -93,6 +96,7 @@ CREATE TABLE IF NOT EXISTS question_reports (
   details TEXT NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewing','resolved','dismissed')),
   admin_note TEXT,
+  screenshot_url TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   UNIQUE (question_id, attempt_id, user_id)

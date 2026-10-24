@@ -15,6 +15,16 @@ export default function QuizDetails() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+  const [mode, setMode] = useState('long');
+  const [customSeconds, setCustomSeconds] = useState('');
+  const [tourOpen, setTourOpen] = useState(false);
+  const [startGuideOpen, setStartGuideOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const tourSteps = [
+    ['Choose a format', 'Short quiz gives instant feedback with a fixed per-question timer. Long test keeps the full paper workflow and final review.'],
+    ['Read the assessment panel', 'The top timer shows remaining time, the question number shows progress, and the question navigator shows answered and unanswered items.'],
+    ['Finish and review', 'Submit before time expires. Your result includes accuracy, response time, rank, topper comparison, and question explanations.'],
+  ];
 
   useEffect(() => {
     Promise.all([getQuizById(id), getMyAttempts()])
@@ -29,10 +39,16 @@ export default function QuizDetails() {
   }, [id]);
 
   const handleStart = async () => {
+    setStartGuideOpen(true);
+  };
+  const confirmStart = async () => {
     setStarting(true);
     setError('');
     try {
-      const r = await startQuiz(id);
+      const r = await startQuiz(id, {
+        mode,
+        ...(mode === 'short' && customSeconds ? { perQuestionSeconds: Number(customSeconds) } : {}),
+      });
       navigate(`/student/quiz/${id}/attempt`, { state: { attemptData: r.data } });
     } catch (err) {
       setError(getErrorMessage(err));
@@ -91,8 +107,33 @@ export default function QuizDetails() {
 
             {error && <div className="rounded-3xl bg-rose-50 border border-rose-200 px-4 py-3 mt-6 text-sm text-rose-700">{error}</div>}
 
+            <div className="mt-6 rounded-3xl border border-indigo-100 bg-indigo-50/60 p-5">
+              <div>
+                <p className="font-semibold text-indigo-950">Choose your test format</p>
+                <p className="mt-1 text-sm text-indigo-800">Short quiz gives instant feedback after each answer. Long test keeps the current full-assessment experience and shows the complete result at the end.</p>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => setMode('short')} className={`rounded-2xl border p-4 text-left ${mode === 'short' ? 'border-indigo-500 bg-white ring-2 ring-indigo-200' : 'border-indigo-100 bg-white/60'}`}>
+                  <p className="font-semibold">⚡ Short quiz</p>
+                  <p className="mt-1 text-xs text-slate-500">Per-question timer and instant answer feedback.</p>
+                </button>
+                <button type="button" onClick={() => setMode('long')} className={`rounded-2xl border p-4 text-left ${mode === 'long' ? 'border-indigo-500 bg-white ring-2 ring-indigo-200' : 'border-indigo-100 bg-white/60'}`}>
+                  <p className="font-semibold">📘 Long test</p>
+                  <p className="mt-1 text-xs text-slate-500">Answer all questions, then review and submit once.</p>
+                </button>
+              </div>
+              {mode === 'short' && (
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <label className="text-sm font-medium text-indigo-950">Seconds per question
+                    <input className="input mt-1 w-40" type="number" min="5" max="600" placeholder={`Standard: ${Math.max(5, Math.round((quiz.duration * 60) / Math.max(1, quiz.question_count)))}`} value={customSeconds} onChange={(e) => setCustomSeconds(e.target.value)} />
+                  </label>
+                  <p className="max-w-md text-xs text-indigo-800">Leave blank to use the standard duration divided by the number of questions.</p>
+                </div>
+              )}
+              <button type="button" onClick={() => { setTourStep(0); setTourOpen(true); }} className="mt-4 text-sm font-semibold text-indigo-700 hover:underline">How this mode works</button>
+            </div>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-500">Ready to test your knowledge? Start the quiz and see your results instantly.</div>
+              <div className="text-sm text-slate-500">Ready to test your knowledge? Start the selected format.</div>
               {attemptsLeft === 0 ? (
                 <div className="rounded-3xl bg-red-50 border border-red-200 px-5 py-3 text-sm font-medium text-red-700">No attempts remaining</div>
               ) : (
@@ -108,6 +149,38 @@ export default function QuizDetails() {
           </div>
         </div>
       </div>
+      {startGuideOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/60 p-4">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Before you begin</p>
+            <h2 className="mt-2 text-2xl font-bold">Rules and screen guide</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-indigo-50 p-4"><b>⏱ Time</b><p className="mt-1 text-sm text-slate-600">{mode === 'short' ? `You have ${customSeconds || Math.max(5, Math.round((quiz.duration * 60) / Math.max(1, quiz.question_count)))} seconds per question.` : `You have ${quiz.duration} minutes for the complete test.`}</p></div>
+              <div className="rounded-2xl bg-emerald-50 p-4"><b>🟢 Answered</b><p className="mt-1 text-sm text-slate-600">Green question numbers mean an answer is selected.</p></div>
+              <div className="rounded-2xl bg-slate-100 p-4"><b>⚪ Unanswered</b><p className="mt-1 text-sm text-slate-600">Gray question numbers have no selected answer.</p></div>
+              <div className="rounded-2xl bg-amber-50 p-4"><b>🟡 Marked</b><p className="mt-1 text-sm text-slate-600">In long test mode, mark questions to review later.</p></div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">
+              <b className="text-slate-900">Submission rules</b>
+              <ul className="mt-2 list-disc space-y-1 pl-5"><li>{mode === 'short' ? 'Short mode moves forward only; answers cannot be changed and there is no Back button.' : 'Long mode lets you move between questions until you submit.'}</li><li>Time expiry submits the attempt automatically.</li><li>After submission, review answers, explanations, timing, rank, and topper comparison.</li></ul>
+            </div>
+            <div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" onClick={() => setStartGuideOpen(false)}>Cancel</button><button className="btn-primary" onClick={confirmStart}>{starting ? 'Starting…' : 'I understand, start quiz'}</button></div>
+          </div>
+        </div>
+      )}
+      {tourOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Quick guide {tourStep + 1}/{tourSteps.length}</p>
+            <h2 className="mt-2 text-2xl font-bold">{tourSteps[tourStep][0]}</h2>
+            <p className="mt-5 text-sm leading-6 text-slate-600">{tourSteps[tourStep][1]}</p>
+            <div className="mt-6 flex items-center justify-between gap-2">
+              <button className="text-sm font-semibold text-slate-500 hover:underline" onClick={() => setTourOpen(false)}>Skip guide</button>
+              <button className="btn-primary" onClick={() => tourStep < tourSteps.length - 1 ? setTourStep((step) => step + 1) : setTourOpen(false)}>{tourStep < tourSteps.length - 1 ? 'Next' : 'Got it, start when ready'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </StudentLayout>
   );
 }

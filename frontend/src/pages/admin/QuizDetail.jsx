@@ -462,14 +462,16 @@ export default function QuizDetail() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [q, qs, reportResponse] = await Promise.all([
-        getQuizById(id),
-        getQuestions(id),
-        getQuestionReports({ quizId: id }),
-      ]);
+      const [q, qs] = await Promise.all([getQuizById(id), getQuestions(id)]);
       setQuiz(q.data.quiz);
       setQuestions(qs.data.questions || []);
-      setReports(reportResponse.data.reports || []);
+      try {
+        const reportResponse = await getQuestionReports({ quizId: id });
+        setReports(reportResponse.data.reports || []);
+      } catch (reportError) {
+        console.error("Unable to load question reports", reportError);
+        setReports([]);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -635,6 +637,7 @@ export default function QuizDetail() {
                       </select>
                     </div>
                     <p className="mt-3 text-sm text-slate-700">{report.details}</p>
+                    {report.screenshot_url && <img src={report.screenshot_url} alt="Student report screenshot" className="mt-3 max-h-56 rounded-xl border object-contain" />}
                     {report.admin_note && <p className="mt-2 text-xs text-slate-500">Admin note: {report.admin_note}</p>}
                   </div>
                 ))}

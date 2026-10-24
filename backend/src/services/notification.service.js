@@ -7,6 +7,7 @@ const TYPES = {
   NEW_QUIZ: 'new_quiz',
   ACCOUNT_STATUS: 'account_status',
   SYSTEM: 'system',
+  QUESTION_REPORT: 'question_report',
 };
 
 const create = async (userId, { type, title, message, data = {} }) => {

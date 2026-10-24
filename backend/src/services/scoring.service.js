@@ -11,7 +11,7 @@ const calculateResult = async (attemptId, submittedAnswers, quiz) => {
     let totalMarks = 0;
     for (const q of questions) { correctMap[q.question_id]={correctOptionId:q.correct_option_id,marks:q.marks}; totalMarks += q.marks; }
     const submittedMap = {};
-    for (const a of (submittedAnswers || [])) submittedMap[a.questionId]={optionId:a.selectedOptionId,timeTaken:Math.max(0,Number(a.timeTaken)||0)};
+    for (const a of (submittedAnswers || [])) submittedMap[a.questionId]={optionId:a.selectedOptionId,timeTaken:Math.max(0,Number(a.timeTaken)||0),marked:Boolean(a.marked)};
     let correct=0,incorrect=0,unanswered=0,obtainedMarks=0;
     for (const q of questions) {
       const submitted=submittedMap[q.question_id];
@@ -21,7 +21,7 @@ const calculateResult = async (attemptId, submittedAnswers, quiz) => {
       if (selectedOptionId===null) unanswered++;
       else if (selectedOptionId===q.correct_option_id) {isCorrect=true;correct++;obtainedMarks+=q.marks;}
       else {isCorrect=false;incorrect++;}
-      await client.query(`INSERT INTO answers (attempt_id,question_id,selected_option_id,is_correct,time_taken) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (attempt_id,question_id) DO UPDATE SET selected_option_id=EXCLUDED.selected_option_id,is_correct=EXCLUDED.is_correct,time_taken=EXCLUDED.time_taken`,[attemptId,q.question_id,selectedOptionId,isCorrect,timeTaken]);
+      await client.query(`INSERT INTO answers (attempt_id,question_id,selected_option_id,is_correct,time_taken,marked) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (attempt_id,question_id) DO UPDATE SET selected_option_id=EXCLUDED.selected_option_id,is_correct=EXCLUDED.is_correct,time_taken=EXCLUDED.time_taken,marked=EXCLUDED.marked`,[attemptId,q.question_id,selectedOptionId,isCorrect,timeTaken,Boolean(submitted?.marked)]);
     }
     const percentage=totalMarks>0?(obtainedMarks/totalMarks)*100:0;
     const status=percentage>=quiz.passing_score?'passed':'failed';

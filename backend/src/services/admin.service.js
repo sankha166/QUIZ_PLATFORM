@@ -41,7 +41,7 @@ const getAttemptById = async (id) => {
        q.question_image_url,q.explanation_image_url,
        sel.image_url AS selected_option_image_url,cor.image_url AS correct_option_image_url,
        COALESCE((SELECT json_agg(json_build_object('id',o.id,'option_text',o.option_text,'image_url',o.image_url,'is_correct',o.is_correct) ORDER BY o.id) FROM options o WHERE o.question_id=q.id),'[]'::json) AS options,
-       COALESCE((SELECT json_agg(json_build_object('id',r.id,'reason',r.reason,'details',r.details,'status',r.status,'admin_note',r.admin_note,'created_at',r.created_at) ORDER BY r.created_at DESC) FROM question_reports r WHERE r.question_id=q.id AND r.attempt_id=$1),'[]'::json) AS reports
+       COALESCE((SELECT json_agg(json_build_object('id',r.id,'reason',r.reason,'details',r.details,'screenshot_url',r.screenshot_url,'status',r.status,'admin_note',r.admin_note,'created_at',r.created_at) ORDER BY r.created_at DESC) FROM question_reports r WHERE r.question_id=q.id AND r.attempt_id=$1),'[]'::json) AS reports
      FROM answers ans JOIN questions q ON q.id=ans.question_id
      JOIN quizzes z ON z.id=q.quiz_id
      LEFT JOIN options sel ON sel.id=ans.selected_option_id
@@ -86,6 +86,7 @@ const getAnalytics = async ({ domain_id = null } = {}) => {
   const popularQuizzes = await query(`SELECT q.title,COUNT(a.id)::int AS attempts FROM quizzes q ${qJoin} LEFT JOIN attempts a ON a.quiz_id=q.id AND a.status!='in_progress' WHERE ${normal.replace(/^AND /,'')} ${filter} GROUP BY q.id,q.title ORDER BY attempts DESC LIMIT 5`, params);
   const avgScorePerQuiz = await query(`SELECT q.title,COALESCE(AVG(a.percentage),0)::numeric(5,2) AS avg_score FROM quizzes q ${qJoin} LEFT JOIN attempts a ON a.quiz_id=q.id AND a.status!='in_progress' WHERE ${normal.replace(/^AND /,'')} ${filter} GROUP BY q.id,q.title ORDER BY avg_score DESC LIMIT 8`, params);
   const popularCategories = await query(`SELECT c.name,COUNT(a.id)::int AS attempts FROM categories c JOIN quizzes q ON q.category_id=c.id LEFT JOIN attempts a ON a.quiz_id=q.id AND a.status!='in_progress' WHERE COALESCE(q.is_live_quiz,FALSE)=FALSE ${scoped ? 'AND c.domain_id=$1' : ''} GROUP BY c.id,c.name ORDER BY attempts DESC LIMIT 6`, params);
+  const openReports = await query(`SELECT COUNT(*)::int AS count FROM question_reports r JOIN questions qu ON qu.id=r.question_id JOIN quizzes q ON q.id=qu.quiz_id WHERE r.status IN ('open','reviewing') ${scoped ? 'AND q.category_id IN (SELECT id FROM categories WHERE domain_id=$1)' : ''}`, params);
 
   return {
     domain_id: scoped ? domain_id : 'all',
@@ -99,6 +100,7 @@ const getAnalytics = async ({ domain_id = null } = {}) => {
       averageScore: parseFloat(avgScore.rows[0].avg),
       passedAttempts: passedAttempts.rows[0].cnt,
       failedAttempts: failedAttempts.rows[0].cnt,
+      openReports: openReports.rows[0].count,
     },
     charts: {
       attemptsOverTime: attemptsOverTime.rows,

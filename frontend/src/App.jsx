@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import QuestionReports from "./pages/admin/QuestionReports";
 import UserManagement from "./pages/admin/UserManagement";
 import UserDetail from "./pages/admin/UserDetail";
 import CategoryManagement from "./pages/admin/CategoryManagement";
@@ -68,6 +69,7 @@ function AppRoutes() {
 
       <Route element={<AdminRoute />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/question-reports" element={<QuestionReports />} />
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/users/:id" element={<UserDetail />} />
         <Route path="/admin/categories" element={<CategoryManagement />} />

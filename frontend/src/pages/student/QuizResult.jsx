@@ -12,6 +12,8 @@ import {
   Cell,
   Pie,
   PieChart,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -43,7 +45,15 @@ export default function QuizResult() {
     [reportReason, setReportReason] = useState("wrong_answer"),
     [reportDetails, setReportDetails] = useState(""),
     [reportSending, setReportSending] = useState(false),
-    [reportMessage, setReportMessage] = useState("");
+    [reportMessage, setReportMessage] = useState(""),
+    [reportScreenshot, setReportScreenshot] = useState("");
+  const readReportScreenshot = (file) => {
+    if (!file?.type?.startsWith("image/")) return setReportMessage("Please choose an image file.");
+    if (file.size > 4 * 1024 * 1024) return setReportMessage("Screenshot must be smaller than 4 MB.");
+    const reader = new FileReader();
+    reader.onload = () => setReportScreenshot(String(reader.result));
+    reader.readAsDataURL(file);
+  };
   useEffect(() => {
     let active = true;
     getAttemptById(attemptId)
@@ -98,6 +108,8 @@ export default function QuizResult() {
     : null;
   const scoreDelta = Number(attempt?.percentage || 0) - Number(comparison.average_percentage || 0);
   const timeDelta = Number(attempt?.time_taken || 0) - Number(comparison.average_time || 0);
+  const topperScore = Number(topper?.percentage ?? comparison.topper_percentage ?? 0);
+  const topperTime = Number(topper?.time_taken || 0);
   const filtered = useMemo(
     () =>
       answers
@@ -107,7 +119,8 @@ export default function QuizResult() {
             filter === "all" ||
             (filter === "correct" && a.is_correct) ||
             (filter === "wrong" && !a.is_correct && a.selected_option_id) ||
-            (filter === "unattempted" && !a.selected_option_id),
+            (filter === "unattempted" && !a.selected_option_id) ||
+            (filter === "marked" && a.marked),
         ),
     [answers, filter],
   );
@@ -135,10 +148,12 @@ export default function QuizResult() {
         questionId: currentAnswer.question_id,
         reason: reportReason,
         details: reportDetails,
+        screenshotUrl: reportScreenshot,
       });
       setReportMessage("Report submitted. Thank you for helping us improve this quiz.");
       setReportOpen(false);
       setReportDetails("");
+      setReportScreenshot("");
     } catch (e) {
       setReportMessage(e?.response?.data?.message || "Unable to submit report.");
     } finally {
@@ -263,6 +278,32 @@ export default function QuizResult() {
               ["Avg. response", qt(stats.avg), `${answers.length} questions analysed`, "text-indigo-600"],
             ].map(([label, value, detail, color]) => <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50"><p className="text-xs text-slate-500">{label}</p><p className={`mt-1 text-xl font-black ${color}`}>{value}</p><p className="mt-1 text-[11px] leading-4 text-slate-500">{detail}</p></div>)}
           </div>
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-amber-950">Your result vs quiz topper</h3>
+                <p className="mt-1 text-xs text-amber-800">A direct comparison of score, accuracy, completion, and time.</p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{topper?.name || "Top recorded attempt"}</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                ["Score", `${Number(attempt.percentage || 0).toFixed(1)}%`, `${topperScore.toFixed(1)}% topper`, Number(attempt.percentage || 0) >= topperScore ? "text-emerald-600" : "text-rose-600"],
+                ["Correct", `${attempt.correct_answers}`, `${Number(topper?.correct_answers || 0)} topper correct`, "text-indigo-600"],
+                ["Incorrect", `${attempt.incorrect_answers}`, `${Number(topper?.incorrect_answers || 0)} topper incorrect`, "text-rose-600"],
+                ["Unanswered", `${attempt.unanswered}`, `${Number(topper?.unanswered || 0)} topper unanswered`, "text-slate-600"],
+                ["Completion", `${answers.length - Number(attempt.unanswered || 0)}/${answers.length}`, "Your answered questions", "text-indigo-600"],
+                ["Time", formatTime(attempt.time_taken), topperTime ? `${formatTime(topperTime)} topper time` : "Topper timing unavailable", "text-amber-700"],
+              ].map(([label, value, detail, color]) => <div key={label} className="rounded-xl border border-amber-100 bg-white/80 p-3"><p className="text-xs text-slate-500">{label}</p><p className={`mt-1 text-lg font-black ${color}`}>{value}</p><p className="mt-1 text-[11px] text-slate-500">{detail}</p></div>)}
+            </div>
+            <div className="mt-4 h-28">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{ name: "Score", you: Number(attempt.percentage || 0), topper: topperScore }, { name: "Time", you: Number(attempt.time_taken || 0), topper: topperTime }]} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis hide /><Tooltip /><Bar dataKey="you" name="You" fill="#6366f1" radius={[5, 5, 0, 0]} /><Bar dataKey="topper" name="Topper" fill="#f59e0b" radius={[5, 5, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
           <div className="mt-5 grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
               <h3 className="font-semibold">Answer distribution</h3>
@@ -275,8 +316,8 @@ export default function QuizResult() {
             </div>
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
               <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold">Response time by question</h3><p className="text-xs text-slate-500">Your time compared with the quiz average</p></div><span className="text-[11px] text-slate-400">seconds</span></div>
-              <div className="mt-3 h-40 min-w-0">
-                {questionChart.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={questionChart} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value) => [`${value}s`]} /><Bar dataKey="time" name="Your time" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="average" name="Quiz average" fill="#cbd5e1" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-xs text-slate-400">Timing data will appear here</div>}
+              <div className="mt-3 h-40 min-w-0 rounded-xl bg-slate-50 p-2">
+                {questionChart.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={questionChart} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} unit="s" /><Tooltip formatter={(value) => [`${value}s`]} /><Line type="monotone" dataKey="time" name="Your time" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, fill: "#4f46e5" }} activeDot={{ r: 7 }} /><Line type="monotone" dataKey="average" name="Quiz average" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3, fill: "#f59e0b" }} /></LineChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-xs text-slate-400">Timing data will appear here</div>}
               </div>
             </div>
           </div>
@@ -313,6 +354,9 @@ export default function QuizResult() {
                 </option>
                 <option value="unattempted">
                   — Unattempted ({attempt.unanswered})
+                </option>
+                <option value="marked">
+                  ★ Marked for review ({answers.filter((answer) => answer.marked).length})
                 </option>
               </select>
               <div className="flex gap-2">
@@ -382,33 +426,38 @@ export default function QuizResult() {
                             </span>
                           )}
                         </div>
-                        <div className="mt-4 border-t pt-4">
-                          {reportMessage && <p className="mb-2 text-xs text-emerald-700">{reportMessage}</p>}
-                          {!reportOpen ? (
-                            <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setReportOpen(true)}>
-                              ⚑ Report an issue with this question
-                            </button>
-                          ) : (
-                            <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
-                              <p className="text-sm font-semibold text-rose-800">What seems wrong?</p>
-                              <select className="input mt-2 w-full" value={reportReason} onChange={(e) => setReportReason(e.target.value)}>
-                                <option value="wrong_answer">Answer may be wrong</option>
-                                <option value="unclear">Question is unclear</option>
-                                <option value="typo">Typo or formatting issue</option>
-                                <option value="image_issue">Image or diagram issue</option>
-                                <option value="other">Other</option>
-                              </select>
-                              <textarea className="input mt-2 w-full" rows={3} maxLength={2000} placeholder="Describe the issue..." value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} />
-                              <div className="mt-2 flex gap-2">
-                                <button className="btn-secondary" onClick={() => setReportOpen(false)}>Cancel</button>
-                                <button className="btn-primary" disabled={reportSending || !reportDetails.trim()} onClick={sendReport}>{reportSending ? "Sending…" : "Submit report"}</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     );
                   })}
+                </div>
+                <div className="mt-5 border-t border-slate-200 pt-4">
+                  {reportMessage && <p className="mb-2 text-sm text-emerald-700">{reportMessage}</p>}
+                  {!reportOpen ? (
+                    <button className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100" onClick={() => { setReportMessage(""); setReportOpen(true); }}>
+                      ⚑ Report a problem with this question
+                    </button>
+                  ) : (
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                      <p className="font-semibold text-rose-800">Report this question</p>
+                      <p className="mt-1 text-xs text-rose-700">Tell the quiz administrator what needs checking. Your report is linked to this question and attempt.</p>
+                      <select className="input mt-3 w-full" value={reportReason} onChange={(e) => setReportReason(e.target.value)}>
+                        <option value="wrong_answer">Answer may be wrong</option>
+                        <option value="unclear">Question is unclear</option>
+                        <option value="typo">Typo or formatting issue</option>
+                        <option value="image_issue">Image or diagram issue</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <textarea className="input mt-2 w-full" rows={3} maxLength={2000} placeholder="Describe the issue..." value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} />
+                      <label className="mt-2 block text-xs font-semibold text-rose-800">Optional screenshot
+                        <input className="mt-1 block w-full text-xs" type="file" accept="image/*" onChange={(e) => readReportScreenshot(e.target.files?.[0])} />
+                      </label>
+                      {reportScreenshot && <img src={reportScreenshot} alt="Report screenshot preview" className="mt-2 max-h-32 rounded-lg border object-contain" />}
+                      <div className="mt-2 flex gap-2">
+                        <button className="btn-secondary" onClick={() => setReportOpen(false)}>Cancel</button>
+                        <button className="btn-primary" disabled={reportSending || !reportDetails.trim()} onClick={sendReport}>{reportSending ? "Sending…" : "Submit report"}</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {(currentAnswer.explanation || currentAnswer.explanation_image_url) && (
                   <div className="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 p-4">
