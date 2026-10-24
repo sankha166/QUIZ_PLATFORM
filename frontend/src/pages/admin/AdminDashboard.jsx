@@ -4,7 +4,8 @@ import { getAdminAnalytics } from "../../api/admin.api";
 import { getDomains } from "../../api/domain.api";
 import { getLiveQuizStats } from "../../api/liveQuiz.api";
 import AdminLayout from "../../components/admin/AdminLayout";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
+import SkeletonCard from "../../components/common/SkeletonCard";
+import ErrorState from "../../components/common/ErrorState";
 import {
   Users,
   FileText,
@@ -53,7 +54,8 @@ export default function AdminDashboard() {
     [domains, setDomains] = useState([]),
     [domain, setDomain] = useState("all"),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     getDomains()
       .then((r) => setDomains(r.data.domains || []))
@@ -64,17 +66,23 @@ export default function AdminDashboard() {
   }, []);
   useEffect(() => {
     setLoading(true);
+    setError("");
     getAdminAnalytics({ domain_id: domain === "all" ? undefined : domain })
       .then((r) => setData(r.data))
       .catch((e) =>
         setError(e?.response?.data?.message || "Unable to load analytics"),
       )
       .finally(() => setLoading(false));
-  }, [domain]);
+  }, [domain, refreshKey]);
   if (loading)
     return (
       <AdminLayout>
-        <LoadingSpinner size="lg" className="py-20" />
+        <div className="space-y-6" aria-label="Loading dashboard">
+          <div className="h-16 w-64 animate-pulse rounded-xl bg-slate-200" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 10 }, (_, index) => <SkeletonCard key={index} variant="stat" />)}
+          </div>
+        </div>
       </AdminLayout>
     );
   const s = data?.stats || {};
@@ -109,11 +117,7 @@ export default function AdminDashboard() {
             </select>
           </div>
         </div>
-        {error && (
-          <div className="rounded-xl bg-red-50 text-red-700 p-3 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <ErrorState message={error} onRetry={() => setRefreshKey((value) => value + 1)} />}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <StatCard icon={<Users />} label="Students" value={s.totalStudents} />
           <StatCard

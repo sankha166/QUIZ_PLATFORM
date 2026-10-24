@@ -4,7 +4,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { useAuth } from "./hooks/useAuth";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AdminRoute from "./routes/AdminRoute";
-import LoadingSpinner from "./components/common/LoadingSpinner";
+import LoadingScreen from "./components/common/LoadingScreen";
 
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -39,10 +39,6 @@ import Home from "./pages/Home";
 
 function RootRedirect() {
   const { isAuthenticated, isAdmin, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingSpinner size="lg" className="min-h-screen" />;
-  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -114,11 +110,21 @@ function AppRoutes() {
   );
 }
 
+function AppContent() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return <AppRoutes />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <AppRoutes />
+        <AppContent />
       </NotificationProvider>
     </AuthProvider>
   );

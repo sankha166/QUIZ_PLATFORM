@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { login as loginApi } from '../../api/auth.api';
 import { useAuth } from '../../hooks/useAuth';
 import { getErrorMessage } from '../../utils/helpers';
+import LoadingScreen from '../../components/common/LoadingScreen';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 export default function Login() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
@@ -11,9 +13,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
 
   const onSubmit = async (data) => {
     setError('');
+    setAuthenticating(true);
     try {
       const res = await loginApi(data);
       login(res.data.token, res.data.user);
@@ -21,8 +25,13 @@ export default function Login() {
       else navigate('/student/dashboard');
     } catch (err) {
       setError(getErrorMessage(err));
+      setAuthenticating(false);
     }
   };
+
+  if (authenticating) {
+    return <LoadingScreen message="Signing you in securely..." />;
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -166,7 +175,7 @@ export default function Login() {
             <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3 text-base">
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  <LoadingSpinner size="sm" />
                   Signing in…
                 </span>
               ) : 'Sign in'}

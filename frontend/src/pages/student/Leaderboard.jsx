@@ -3,6 +3,8 @@ import { getLeaderboard } from "../../api/admin.api";
 import { getCategories as getCats } from "../../api/quiz.api";
 import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import SkeletonCard from "../../components/common/SkeletonCard";
+import ErrorState from "../../components/common/ErrorState";
 import EmptyState from "../../components/common/EmptyState";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPercent } from "../../utils/helpers";
@@ -35,7 +37,9 @@ export default function Leaderboard() {
     [loading, setLoading] = useState(true),
     [type, setType] = useState("overall"),
     [period, setPeriod] = useState("all"),
-    [categoryId, setCategoryId] = useState("");
+    [categoryId, setCategoryId] = useState(""),
+    [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState("");
   useEffect(() => {
     getCats()
       .then((r) => setCategories(r.data.categories || []))
@@ -43,15 +47,16 @@ export default function Leaderboard() {
   }, []);
   useEffect(() => {
     setLoading(true);
+    setError("");
     getLeaderboard({
       type,
       period,
       categoryId: type === "category" ? categoryId : undefined,
     })
       .then((r) => setBoard(r.data.leaderboard || []))
-      .catch(console.error)
+      .catch((err) => setError(err?.response?.data?.message || "Unable to load the leaderboard."))
       .finally(() => setLoading(false));
-  }, [type, period, categoryId]);
+  }, [type, period, categoryId, refreshKey]);
   const currentRank = useMemo(
     () => board.find((e) => e.id === user?.id)?.rank,
     [board, user],
@@ -117,7 +122,11 @@ export default function Leaderboard() {
           </div>
         </div>
         {loading ? (
-          <LoadingSpinner size="lg" className="py-16" />
+          <div className="grid gap-3" aria-label="Loading leaderboard">
+            {Array.from({ length: 5 }, (_, index) => <SkeletonCard key={index} variant="stat" />)}
+          </div>
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => setRefreshKey((value) => value + 1)} />
         ) : board.length === 0 ? (
           <EmptyState
             icon="🏆"

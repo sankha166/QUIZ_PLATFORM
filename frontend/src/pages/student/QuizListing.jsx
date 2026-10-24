@@ -8,6 +8,8 @@ import {
 } from "../../api/favorites.api";
 import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import SkeletonCard from "../../components/common/SkeletonCard";
+import ErrorState from "../../components/common/ErrorState";
 import Badge from "../../components/common/Badge";
 import EmptyState from "../../components/common/EmptyState";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -107,7 +109,9 @@ export default function QuizListing() {
     [search, setSearch] = useState(""),
     [category, setCategory] = useState(""),
     [difficulty, setDifficulty] = useState(""),
-    [sort, setSort] = useState("");
+    [sort, setSort] = useState(""),
+    [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState("");
   const debouncedSearch = useDebounce(search);
   const preferredDomainId = user?.preferred_domain_id
     ? String(user.preferred_domain_id)
@@ -139,6 +143,7 @@ export default function QuizListing() {
   }, [preferredDomainId]);
   useEffect(() => {
     setLoading(true);
+    setError("");
     getQuizzes({
       search: debouncedSearch,
       category,
@@ -147,9 +152,9 @@ export default function QuizListing() {
       ...(preferredDomainId ? { domain_id: preferredDomainId } : {}),
     })
       .then((r) => setQuizzes(r.data.quizzes || []))
-      .catch(console.error)
+      .catch((err) => setError(err?.response?.data?.message || "Unable to load quizzes."))
       .finally(() => setLoading(false));
-  }, [debouncedSearch, category, difficulty, sort, preferredDomainId]);
+  }, [debouncedSearch, category, difficulty, sort, preferredDomainId, refreshKey]);
   const toggleFavorite = async (id) => {
     const s = String(id);
     try {
@@ -242,7 +247,11 @@ export default function QuizListing() {
           </button>
         </div>
         {loading ? (
-          <LoadingSpinner size="lg" className="py-16" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading quizzes">
+            {Array.from({ length: 6 }, (_, index) => <SkeletonCard key={index} />)}
+          </div>
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => setRefreshKey((value) => value + 1)} />
         ) : quizzes.length === 0 ? (
           <EmptyState
             icon="🔍"

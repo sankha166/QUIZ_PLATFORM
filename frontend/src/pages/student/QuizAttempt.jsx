@@ -4,6 +4,7 @@ import { startQuiz, submitQuiz } from "../../api/attempt.api";
 import { getShortFeedback } from "../../api/reviews.api";
 import { useTimer } from "../../hooks/useTimer";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import LoadingScreen from "../../components/common/LoadingScreen";
 import ConfirmModal from "../../components/common/ConfirmModal";
 function formatQuestionTime(seconds) {
   return seconds < 60
@@ -168,12 +169,7 @@ export default function QuizAttempt() {
     );
   if (autoSubmitting)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-xl font-semibold text-gray-700">
-          ⏰ Time's up! Submitting…
-        </p>
-        <LoadingSpinner size="lg" />
-      </div>
+      <LoadingScreen message="Time's up! Submitting your answers..." />
     );
   if (!questions.length)
     return (
@@ -445,7 +441,7 @@ export default function QuizAttempt() {
                     onClick={() => setShowConfirm(true)}
                     className="btn-success w-full sm:w-auto"
                   >
-                    {submitting ? "Submitting…" : "Submit Quiz"}
+                    {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />Submitting…</span> : "Submit Quiz"}
                   </button>
                 ) : null}
               </div>
@@ -486,7 +482,7 @@ export default function QuizAttempt() {
                 disabled={submitting}
                 className="btn-success w-full mt-5"
               >
-                {submitting ? "Submitting…" : "Submit Quiz"}
+                {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />Submitting…</span> : "Submit Quiz"}
               </button>
             </div>
           </aside>
