@@ -20,6 +20,9 @@ export default function LiveQuizAttempt() {
   const [submitting, setSubmitting] = useState(false);
   const [waitingForNext, setWaitingForNext] = useState(false);
   const [serverOffset, setServerOffset] = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
+  const [scoreFlash, setScoreFlash] = useState(false);
+  const [scoreFlashType, setScoreFlashType] = useState("neutral");
   const transitionRef = useRef(false);
 
   useEffect(() => {
@@ -81,6 +84,11 @@ export default function LiveQuizAttempt() {
       const responseServerMs = new Date(r.data.serverNow || Date.now()).getTime();
       setServerOffset(responseServerMs - Date.now());
       setReveal(r.data);
+      setTotalScore(Number(r.data.totalRating || 0));
+      const delta = Number(r.data.rating || 0);
+      setScoreFlashType(delta > 0 ? "positive" : delta < 0 ? "negative" : "neutral");
+      setScoreFlash(true);
+      window.setTimeout(() => setScoreFlash(false), 900);
       setSubmitting(false);
       setData((currentData) => ({
         ...currentData,
@@ -137,13 +145,13 @@ export default function LiveQuizAttempt() {
   const expiredReveal = reveal && !selected;
   const isBeforeQuestion = serverNow(serverOffset) < new Date(q.question_start_at).getTime();
 
-  return <StudentLayout><div className="mx-auto min-w-0 max-w-4xl">
-    <div className="mb-4 flex items-center justify-between gap-3"><div className="min-w-0"><span className="live-badge">Live quiz</span><h1 className="mt-2 break-words text-xl font-semibold sm:text-2xl">{data.quiz?.title}</h1><p className="text-xs text-slate-500">Question {index + 1} of {questions.length}</p></div><div className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold tabular-nums ${seconds <= 5 && !isBeforeQuestion ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-700"}`}>{isBeforeQuestion ? "Starting" : `${seconds}s`}</div></div>
+  return <StudentLayout><div className="mx-auto min-w-0 max-w-4xl overflow-x-hidden pb-24 pt-20 sm:pb-0 sm:pt-0">
+    <div className="fixed inset-x-0 top-0 z-40 border-b bg-white/95 px-3 py-3 shadow-sm backdrop-blur sm:static sm:mb-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none"><div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3"><div className="min-w-0"><span className="live-badge">Live quiz</span><h1 className="mt-2 break-words text-xl font-semibold sm:text-2xl">{data.quiz?.title}</h1><p className="text-xs text-slate-500">Question {index + 1} of {questions.length}</p></div><div className="flex max-w-full flex-wrap items-center justify-end gap-2"><span className={`rounded-lg px-3 py-1.5 text-sm font-bold transition-all ${scoreFlash ? scoreFlashType === "positive" ? "bg-emerald-500 text-white ring-4 ring-emerald-200 scale-105" : scoreFlashType === "negative" ? "bg-rose-500 text-white ring-4 ring-rose-200 scale-105" : "bg-slate-500 text-white ring-4 ring-slate-200 scale-105" : "bg-indigo-50 text-indigo-700"}`}>Score: {totalScore.toFixed(2)} {scoreFlash && (scoreFlashType === "positive" ? "↑" : scoreFlashType === "negative" ? "↓" : "•")}</span><div className={`rounded-lg px-3 py-1.5 text-sm font-semibold tabular-nums ${seconds <= 5 && !isBeforeQuestion ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-700"}`}>{isBeforeQuestion ? "Starting" : `${seconds}s`}</div></div></div></div>
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
       <div className="h-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-indigo-500 transition-[width] duration-100" style={{ width: `${((index + 1) / questions.length) * 100}%` }}/></div>
       <div className="mt-3 flex justify-between text-xs text-slate-400"><span>{limit}s answer window</span><span>{waitingForNext ? "Next question follows the shared event clock" : "Select one answer"}</span></div>
       <h2 className="mt-6 text-lg font-medium leading-8 sm:text-xl">{q.question_text}</h2>
-      <div className="mt-6 space-y-2.5">{(q.options || []).map((o, i) => { const dist = distribution.find((x) => String(x.id) === String(o.id)); const pct = total ? Math.round((Number(dist?.chosen || 0) / total) * 100) : 0; const correct = String(reveal?.correctOptionId) === String(o.id); const mine = String(selected) === String(o.id); return <button disabled={Boolean(reveal) || submitting || Boolean(previousAnswer) || isBeforeQuestion} key={o.id} onClick={() => submitAnswer(o.id)} className={`w-full rounded-xl border p-4 text-left transition ${reveal ? correct ? "border-emerald-400 bg-emerald-50" : mine ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-slate-50" : mine ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"}`}><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs">{String.fromCharCode(65 + i)}</span><span className="min-w-0 flex-1 text-sm sm:text-base">{o.option_text}</span>{reveal && <span className={`shrink-0 text-xs ${correct ? "text-emerald-700" : "text-slate-500"}`}>{pct}%{correct ? " · Correct" : ""}</span>}</div>{reveal && <div className="mt-3 h-1 overflow-hidden rounded-full bg-white"><div className={`h-full ${correct ? "bg-emerald-500" : "bg-indigo-400"}`} style={{ width: `${pct}%` }}/></div>}</button>; })}</div>
+      <div className="mt-6 space-y-2.5">{(q.options || []).map((o, i) => { const dist = distribution.find((x) => String(x.id) === String(o.id)); const pct = total ? Math.round((Number(dist?.chosen || 0) / total) * 100) : 0; const correct = String(reveal?.correctOptionId) === String(o.id); const mine = String(selected) === String(o.id); return <button disabled={Boolean(reveal) || submitting || Boolean(previousAnswer) || isBeforeQuestion} key={o.id} onClick={() => submitAnswer(o.id)} className={`w-full min-w-0 rounded-xl border p-3 sm:p-4 text-left transition ${reveal ? correct ? "border-emerald-400 bg-emerald-50" : mine ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-slate-50" : mine ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"}`}><div className="flex min-w-0 items-start gap-2 sm:gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs">{String.fromCharCode(65 + i)}</span><span className="min-w-0 flex-1 break-words text-sm sm:text-base">{o.option_text}</span>{reveal && <span className={`shrink-0 text-xs ${correct ? "text-emerald-700" : "text-slate-500"}`}>{pct}%{correct ? " · Correct" : ""}</span>}</div>{reveal && <div className="mt-3 h-1 overflow-hidden rounded-full bg-white"><div className={`h-full ${correct ? "bg-emerald-500" : "bg-indigo-400"}`} style={{ width: `${pct}%` }}/></div>}</button>; })}</div>
       {reveal && <div className={`mt-5 rounded-xl border p-4 ${reveal.correct ? "border-emerald-200 bg-emerald-50 text-emerald-800" : expiredReveal ? "border-amber-200 bg-amber-50 text-amber-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{reveal.correct ? "Correct answer" : expiredReveal ? "Time expired — correct answer" : "Incorrect answer"}</span><span className="rounded-full bg-white/80 px-2.5 py-1 text-xs">{reveal.multiplier}× · {Number(reveal.rating) > 0 ? "+" : ""}{reveal.rating} rating</span></div><p className="mt-1 text-sm">The correct option is highlighted. The next question follows the shared event schedule.</p></div>}
     </div>
   </div></StudentLayout>;

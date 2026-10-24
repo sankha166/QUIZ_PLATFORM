@@ -16,7 +16,7 @@ const getAll = async ({ role, search, category, domain_id, difficulty, sort, sta
 };
 
 const getById = async (id, role) => {
-  const result = await query(`SELECT q.*, c.name category_name, c.domain_id, d.name domain_name, COUNT(DISTINCT qs.id)::int question_count, COUNT(DISTINCT a.id)::int attempt_count FROM quizzes q LEFT JOIN categories c ON c.id = q.category_id LEFT JOIN domains d ON d.id = c.domain_id LEFT JOIN questions qs ON qs.quiz_id = q.id LEFT JOIN attempts a ON a.quiz_id = q.id WHERE q.id = $1 GROUP BY q.id, c.name, c.domain_id, d.name`, [id]);
+  const result = await query(`SELECT q.*, c.name category_name, c.domain_id, d.name domain_name, COUNT(DISTINCT qs.id)::int question_count, (SELECT COALESCE(SUM(tq.marks), 0)::numeric FROM questions tq WHERE tq.quiz_id = q.id) total_marks, COUNT(DISTINCT a.id)::int attempt_count FROM quizzes q LEFT JOIN categories c ON c.id = q.category_id LEFT JOIN domains d ON d.id = c.domain_id LEFT JOIN questions qs ON qs.quiz_id = q.id LEFT JOIN attempts a ON a.quiz_id = q.id WHERE q.id = $1 GROUP BY q.id, c.name, c.domain_id, d.name`, [id]);
   if (!result.rows.length) { const e = new Error('Quiz not found'); e.status = 404; throw e; }
   const quiz = result.rows[0];
   if (role === 'STUDENT' && (quiz.status !== 'published' || quiz.is_live_quiz)) { const e = new Error('Quiz not available'); e.status = 404; throw e; }

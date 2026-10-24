@@ -47,7 +47,7 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
   }
   await domainCheck(qid, uid);
   const inProgress = await query(
-    `SELECT id,expiry_time,mode,per_question_seconds FROM attempts
+    `SELECT id,started_at,expiry_time,mode,per_question_seconds FROM attempts
      WHERE quiz_id=$1 AND user_id=$2 AND status='in_progress' AND expiry_time>NOW()`,
     [qid, uid],
   );
@@ -64,6 +64,7 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
     );
     return {
       attemptId: inProgress.rows[0].id,
+      startedAt: inProgress.rows[0].started_at,
       questions: await questionService.getByQuiz(qid, false),
       expiryTime: inProgress.rows[0].expiry_time,
       quiz,
@@ -103,6 +104,7 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
   );
   return {
     attemptId: created.rows[0].id,
+    startedAt: created.rows[0].started_at,
     questions: await questionService.getByQuiz(qid, false),
     expiryTime: created.rows[0].expiry_time,
     quiz,

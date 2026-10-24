@@ -58,6 +58,10 @@ export default function QuizDetails() {
 
   if (loading) return <StudentLayout><LoadingSpinner size="lg" className="py-20" /></StudentLayout>;
   if (!quiz) return <StudentLayout><p className="text-center text-red-600 py-20">Quiz not found.</p></StudentLayout>;
+  const questionMarks = Number(quiz.default_question_marks) || 1;
+  const negativePercent = Math.min(100, Math.max(0, Number(quiz.negative_marking_percent) || 0));
+  const negativeMarks = questionMarks * negativePercent / 100;
+  const totalMarks = Number(quiz.total_marks) || questionMarks * (Number(quiz.question_count) || 0);
 
   return (
     <StudentLayout>
@@ -92,8 +96,35 @@ export default function QuizDetails() {
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Passing score</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.passing_score}%</p>
               </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Marks of each question</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{questionMarks.toFixed(2)} marks</p>
+              </div>
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total marks</p>
+                <p className="mt-3 text-lg font-semibold text-slate-900">{totalMarks.toFixed(2)} marks</p>
+              </div>
             </div>
-
+            <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/70 p-5">
+              <h2 className="font-bold text-emerald-950">Scoring rules for this quiz</h2>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Correct answer</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-900">+{questionMarks.toFixed(2)} marks</p>
+                </div>
+                <div className="rounded-2xl bg-white/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Unanswered</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900">0 marks</p>
+                </div>
+                <div className="rounded-2xl bg-white/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Wrong answer</p>
+                  <p className="mt-1 text-lg font-bold text-rose-900">{negativePercent ? `−${negativeMarks.toFixed(2)} marks` : "No negative marking"}</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-emerald-900">
+                Total available marks: <strong>{totalMarks.toFixed(2)}</strong>. {negativePercent ? `Negative marking is ${negativePercent.toFixed(2)}% of the marks for that question.` : "Wrong answers do not reduce your score."}
+              </p>
+            </div>
             <div className="grid gap-4 mt-6 sm:grid-cols-2">
               <div className="rounded-3xl bg-white border border-slate-200 p-5">
                 <p className="text-sm text-slate-500">Attempts available</p>
@@ -163,6 +194,14 @@ export default function QuizDetails() {
             <div className="mt-4 rounded-2xl border border-slate-200 p-4 text-sm text-slate-600">
               <b className="text-slate-900">Submission rules</b>
               <ul className="mt-2 list-disc space-y-1 pl-5"><li>{mode === 'short' ? 'Short mode moves forward only; answers cannot be changed and there is no Back button.' : 'Long mode lets you move between questions until you submit.'}</li><li>Time expiry submits the attempt automatically.</li><li>After submission, review answers, explanations, timing, rank, and topper comparison.</li></ul>
+            </div>
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <b className="text-emerald-950">How marks are calculated</b>
+              <div className="mt-2 grid gap-2 text-sm text-emerald-900 sm:grid-cols-3">
+                <span>Correct: <strong>+{questionMarks.toFixed(2)}</strong></span>
+                <span>Unanswered: <strong>0</strong></span>
+                <span>Wrong: <strong>{negativePercent ? `−${negativeMarks.toFixed(2)}` : "No deduction"}</strong></span>
+              </div>
             </div>
             <div className="mt-6 flex justify-end gap-2"><button className="btn-secondary" onClick={() => setStartGuideOpen(false)}>Cancel</button><button className="btn-primary" onClick={confirmStart}>{starting ? 'Starting…' : 'I understand, start quiz'}</button></div>
           </div>
