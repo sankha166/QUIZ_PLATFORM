@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS quizzes (
   thumbnail_url VARCHAR(500),
   created_at    TIMESTAMP DEFAULT NOW(),
   updated_at    TIMESTAMP DEFAULT NOW()
+  ,negative_marking_percent NUMERIC(6,2) NOT NULL DEFAULT 0
+  ,default_question_marks NUMERIC(10,2) NOT NULL DEFAULT 1
 );
 
 -- Questions table
@@ -40,7 +42,7 @@ CREATE TABLE IF NOT EXISTS questions (
   id            SERIAL PRIMARY KEY,
   quiz_id       INTEGER NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
-  marks         INTEGER NOT NULL DEFAULT 1 CHECK (marks > 0),
+  marks         NUMERIC(10,2) NOT NULL DEFAULT 1 CHECK (marks > 0),
   explanation   TEXT,
   question_image_url TEXT,
   explanation_image_url TEXT,
@@ -62,7 +64,7 @@ CREATE TABLE IF NOT EXISTS attempts (
   id                SERIAL PRIMARY KEY,
   quiz_id           INTEGER NOT NULL REFERENCES quizzes(id),
   user_id           INTEGER NOT NULL REFERENCES users(id),
-  score             INTEGER,
+  score             NUMERIC(10,2),
   percentage        NUMERIC(5,2),
   correct_answers   INTEGER DEFAULT 0,
   incorrect_answers INTEGER DEFAULT 0,
@@ -84,6 +86,7 @@ CREATE TABLE IF NOT EXISTS answers (
   selected_option_id INTEGER REFERENCES options(id),
   is_correct         BOOLEAN,
   marked             BOOLEAN NOT NULL DEFAULT FALSE,
+  marks_awarded      NUMERIC(10,2) NOT NULL DEFAULT 0,
   UNIQUE (attempt_id, question_id)
 );
 

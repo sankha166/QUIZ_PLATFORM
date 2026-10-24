@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { startQuiz, submitQuiz } from "../../api/attempt.api";
+import { getShortFeedback } from "../../api/reviews.api";
 import { useTimer } from "../../hooks/useTimer";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ConfirmModal from "../../components/common/ConfirmModal";
@@ -26,8 +27,10 @@ export default function QuizAttempt() {
     [submitError, setSubmitError] = useState(""),
     [shortSecondsLeft, setShortSecondsLeft] = useState(null),
     [shortFeedback, setShortFeedback] = useState(null),
+    [shortScore, setShortScore] = useState(0),
     [markedQuestions, setMarkedQuestions] = useState({}),
     questionStarted = useRef(Date.now()),
+    feedbackTimer = useRef(null),
     submittingRef = useRef(false),
     questionsRef = useRef([]),
     answersRef = useRef({});
@@ -48,6 +51,9 @@ export default function QuizAttempt() {
       setShortFeedback(null);
     }
   }, [current, attemptData]);
+  useEffect(() => () => {
+    if (feedbackTimer.current) window.clearTimeout(feedbackTimer.current);
+  }, []);
   useEffect(() => {
     const block = (e) => e.preventDefault(),
       key = (e) => {
@@ -124,7 +130,7 @@ export default function QuizAttempt() {
     [answers, attemptData, id, navigate, questionTimes, current, markedQuestions],
   );
   const { minutes, seconds, secondsLeft } = useTimer(
-    attemptData?.expiryTime,
+    attemptData?.mode === "short" ? null : attemptData?.expiryTime,
     () => handleSubmit(true),
   );
   if (loading || !attemptData)
@@ -160,24 +166,39 @@ export default function QuizAttempt() {
     answered = Object.keys(answers).length,
     unanswered = questions.length - answered;
   const optionStats = (attemptData.optionStats || []).filter((item) => String(item.question_id) === String(question?.id));
-  const selectAnswer = (optionId) => {
-    setAnswers((prev) => ({ ...prev, [question.id]: optionId }));
-    if (attemptData.mode === "short") {
-      const selected = optionStats.find((item) => String(item.option_id) === String(optionId));
-      const total = Number(selected?.total_selections) || 0;
-      setShortFeedback({
-        selected: optionId,
-        percentage: total ? Math.round((Number(selected.selections) / total) * 100) : null,
+  const revealShortFeedback = async (optionId = null) => {
+    if (shortFeedback || submitting) return;
+    try {
+      const response = await getShortFeedback({
+        attemptId: attemptData.attemptId,
+        questionId: question.id,
+        selectedOptionId: optionId,
       });
-      window.setTimeout(() => {
+      const data = response.data;
+      setShortFeedback({ selected: optionId, ...data });
+      setShortScore((value) => value + Number(data.scoreDelta || 0));
+      feedbackTimer.current = window.setTimeout(() => {
         if (current < questions.length - 1) goTo(current + 1);
-        else handleSubmit(false);
-      }, 900);
+        else handleSubmit(true);
+      }, 3000);
+    } catch (error) {
+      setSubmitError(error?.response?.data?.message || "Unable to load question feedback.");
     }
+  };
+  const selectAnswer = (optionId) => {
+    if (attemptData.mode === "short" && shortFeedback) return;
+    const nextAnswers = { ...answersRef.current, [question.id]: optionId };
+    answersRef.current = nextAnswers;
+    setAnswers(nextAnswers);
+    if (attemptData.mode === "short") revealShortFeedback(optionId);
   };
   const toggleMarked = () => {
     if (attemptData.mode === "short") return;
     setMarkedQuestions((previous) => ({ ...previous, [question.id]: !previous[question.id] }));
+  };
+  const advanceShort = () => {
+    if (shortFeedback) return;
+    revealShortFeedback(answers[question.id] || null);
   };
   const goTo = (next) => {
     const elapsed = Math.max(
@@ -193,8 +214,7 @@ export default function QuizAttempt() {
   useEffect(() => {
     if (attemptData.mode !== "short" || shortSecondsLeft === null || shortFeedback) return undefined;
     if (shortSecondsLeft <= 0) {
-      if (current < questions.length - 1) goTo(current + 1);
-      else handleSubmit(true);
+      revealShortFeedback();
       return undefined;
     }
     const timer = window.setTimeout(() => setShortSecondsLeft((value) => Math.max(0, (value || 1) - 1)), 1000);
@@ -220,12 +240,12 @@ export default function QuizAttempt() {
           </div>
           <div className="flex items-center gap-2">
           {attemptData.mode === "short" && <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">⚡ Short mode</span>}
-          <div
+          {attemptData.mode !== "short" && <div
             className={`shrink-0 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold ${secondsLeft !== null && secondsLeft < 60 ? "bg-red-100 text-red-600" : "bg-indigo-50 text-indigo-700"}`}
           >
             ⏱ {String(minutes ?? 0).padStart(2, "0")}:
             {String(seconds ?? 0).padStart(2, "0")}
-          </div>
+          </div>}
           </div>
         </div>
       </header>
@@ -289,7 +309,15 @@ export default function QuizAttempt() {
                 {question?.options?.map((opt, index) => (
                   <label
                     key={opt.id}
-                    className={`flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${answers[question.id] == opt.id ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40"}`}
+                    className={`flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      shortFeedback
+                        ? String(opt.id) === String(shortFeedback.correctOptionId)
+                          ? "border-emerald-500 bg-emerald-50"
+                          : String(opt.id) === String(shortFeedback.selected)
+                            ? "border-rose-500 bg-rose-50"
+                            : "border-slate-200 bg-slate-50"
+                        : answers[question.id] == opt.id ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40"
+                    }`}
                   >
                     <span
                       className={`mt-0.5 h-7 w-7 shrink-0 rounded-lg grid place-items-center text-xs font-bold ${answers[question.id] == opt.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}
@@ -302,6 +330,7 @@ export default function QuizAttempt() {
                       value={opt.id}
                       checked={answers[question.id] == opt.id}
                       onChange={() => selectAnswer(opt.id)}
+                      disabled={attemptData.mode === "short" && Boolean(shortFeedback)}
                       className="sr-only"
                     />
                     <span className="text-sm sm:text-base text-slate-800 leading-6">
@@ -312,20 +341,38 @@ export default function QuizAttempt() {
                 ))}
               </div>
               {attemptData.mode === "short" && shortFeedback && (
-                <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-800">
-                  {shortFeedback.percentage === null ? "No response distribution is available yet." : `This option was selected by ${shortFeedback.percentage}% of previous participants.`}
+                <div className={`mt-4 rounded-2xl border p-4 text-sm ${shortFeedback.isCorrect ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2"><strong>{shortFeedback.isCorrect ? "Correct answer" : shortFeedback.selected ? "Incorrect answer" : "Time expired"}</strong><b>Live score: {shortScore.toFixed(2)}</b></div>
+                  <p className="mt-1">Correct option: {String.fromCharCode(65 + question.options.findIndex((item) => String(item.id) === String(shortFeedback.correctOptionId)))}</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {question.options.map((item) => {
+                      const stat = shortFeedback.options?.find((entry) => String(entry.option_id) === String(item.id));
+                      const total = Number(stat?.total_selections) || 0;
+                      const percentage = total ? Math.round((Number(stat.selections) / total) * 100) : 0;
+                      return <div key={item.id} className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2"><span>{item.option_text}</span><b>{percentage}%</b></div>;
+                    })}
+                  </div>
                 </div>
               )}
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-7">
-                <button
+                {attemptData.mode === "long" && <button
                   type="button"
                   onClick={() => goTo(Math.max(0, current - 1))}
                   disabled={current === 0 || submitting}
                   className="btn-secondary disabled:opacity-40 w-full sm:w-auto"
                 >
                   ← Previous
-                </button>
-                {current < questions.length - 1 ? (
+                </button>}
+                {attemptData.mode === "short" ? (
+                  <button
+                    type="button"
+                    onClick={advanceShort}
+                    disabled={submitting || Boolean(shortFeedback)}
+                    className="btn-primary w-full sm:w-auto"
+                  >
+                    {answers[question.id] ? "Show answer & continue →" : "Continue →"}
+                  </button>
+                ) : current < questions.length - 1 ? (
                   <button
                     type="button"
                     onClick={() => goTo(current + 1)}
@@ -334,7 +381,7 @@ export default function QuizAttempt() {
                   >
                     Next →
                   </button>
-                ) : (
+                ) : attemptData.mode === "long" ? (
                   <button
                     type="button"
                     disabled={submitting}
@@ -343,7 +390,7 @@ export default function QuizAttempt() {
                   >
                     {submitting ? "Submitting…" : "Submit Quiz"}
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
           </main>
@@ -363,7 +410,7 @@ export default function QuizAttempt() {
                     type="button"
                     key={q.id}
                     onClick={() => goTo(i)}
-                    disabled={submitting}
+                    disabled={submitting || attemptData.mode === "short"}
                     className={`aspect-square text-xs rounded-xl font-semibold ${i === current ? "bg-indigo-600 text-white" : markedQuestions[q.id] ? "bg-amber-400 text-amber-950" : answers[q.id] ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}
                   >
                     {i + 1}

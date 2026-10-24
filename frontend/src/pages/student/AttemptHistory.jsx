@@ -126,13 +126,14 @@ export default function AttemptHistory() {
                     {attempts.map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50">
                         <td className="px-4 py-4 font-medium text-slate-900">
-                          {a.quiz_title}
+                          <div>{a.quiz_title}</div>
+                          {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">SHORT QUIZ</span>}
                         </td>
                         <td className="px-4 py-4 text-slate-500">
                           {a.category_name || "—"}
                         </td>
                         <td className="px-4 py-4 font-semibold">
-                          {formatPercent(a.percentage)}
+                          {Number(a.score || 0).toFixed(2)} / {Number(a.total_marks || 0).toFixed(2)}<span className="ml-1 text-xs text-slate-500">({formatPercent(a.percentage)})</span>
                         </td>
                         <td className="px-4 py-4">
                           <Badge className={statusColor(a.status)}>
@@ -170,6 +171,7 @@ export default function AttemptHistory() {
                       <h3 className="font-semibold text-slate-900 truncate">
                         {a.quiz_title}
                       </h3>
+                      {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">SHORT QUIZ</span>}
                       <p className="text-xs text-slate-500 mt-1">
                         {a.category_name || "General"} ·{" "}
                         {formatDate(a.completed_at)}
@@ -180,7 +182,8 @@ export default function AttemptHistory() {
                   <div className="grid grid-cols-3 gap-2 mt-4 text-center">
                     <div className="rounded-xl bg-slate-50 p-2">
                       <p className="text-[10px] text-slate-400">Score</p>
-                      <p className="font-bold">{formatPercent(a.percentage)}</p>
+                      <p className="font-bold">{Number(a.score || 0).toFixed(2)} / {Number(a.total_marks || 0).toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-500">{formatPercent(a.percentage)}</p>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-2">
                       <p className="text-[10px] text-slate-400">Time</p>

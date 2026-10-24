@@ -80,6 +80,8 @@ export default function QuizForm() {
       difficulty: "medium",
       max_attempts: 1,
       passing_score: 60,
+      negative_marking_percent: 0,
+      default_question_marks: 1,
       duration: 10,
       is_live_quiz: createLive,
       live_all_domains: false,
@@ -127,6 +129,8 @@ export default function QuizForm() {
             live_score_075: Number(q.live_score_075 ?? 1.25),
             live_score_100: Number(q.live_score_100 ?? 1),
             live_score_wrong: Number(q.live_score_wrong ?? -0.5),
+            negative_marking_percent: Number(q.negative_marking_percent ?? 0),
+            default_question_marks: Number(q.default_question_marks ?? 1),
           });
         } else if (createLive) {
           setDomainId("all");
@@ -391,6 +395,40 @@ export default function QuizForm() {
                     className="input"
                     {...register("max_attempts", { valueAsNumber: true })}
                   />
+                </div>
+                <div>
+                  <label className="label">Negative marking (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="input"
+                    {...register("negative_marking_percent", {
+                      valueAsNumber: true,
+                      min: 0,
+                      max: 100,
+                    })}
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Percentage of a question&apos;s marks deducted for a wrong answer.
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Marks per question</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    className="input"
+                    {...register("default_question_marks", {
+                      valueAsNumber: true,
+                      min: 0.01,
+                    })}
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Applies to all current questions and new questions. You can override an individual question later.
+                  </p>
                 </div>
               </div>
             )}

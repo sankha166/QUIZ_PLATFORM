@@ -78,6 +78,7 @@ export default function QuizResult() {
     };
   }, [attemptId]);
   const answers = attempt?.answers || [];
+  const negativeMarks = answers.reduce((total, answer) => total + Math.max(0, -Number(answer.marks_awarded || 0)), 0);
   const stats = useMemo(() => {
     const t = answers.map((a) => Number(a.time_taken) || 0);
     return {
@@ -233,6 +234,7 @@ export default function QuizResult() {
             <p
               className={`mt-6 text-5xl sm:text-7xl font-black ${passed ? "text-emerald-600" : "text-rose-600"}`}
             >
+              <span className="block text-2xl sm:text-3xl text-slate-700">{Number(attempt.score || 0).toFixed(2)} / {Number(attempt.total_marks || 0).toFixed(2)} marks</span>
               {parseFloat(attempt.percentage).toFixed(1)}
               <span className="text-2xl">%</span>
             </p>
@@ -250,6 +252,11 @@ export default function QuizResult() {
               </div>
             ))}
           </div>
+          {Number(attempt.negative_marking_percent || 0) > 0 && (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              Negative marking: {Number(attempt.negative_marking_percent).toFixed(2)}% per wrong answer · Penalty applied: <strong>{negativeMarks.toFixed(2)} marks</strong>
+            </div>
+          )}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-indigo-50 border p-4">
               <p className="text-xs text-indigo-600">Avg. per question</p>
@@ -387,6 +394,9 @@ export default function QuizResult() {
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
                     ⏱ {qt(currentAnswer.time_taken)}
                   </span>
+                </div>
+                <div className={`mb-4 rounded-xl px-3 py-2 text-sm font-semibold ${Number(currentAnswer.marks_awarded) < 0 ? "bg-rose-50 text-rose-700" : currentAnswer.is_correct ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600"}`}>
+                  Marks awarded: {Number(currentAnswer.marks_awarded || 0).toFixed(2)} / {Number(currentAnswer.marks || 0).toFixed(2)}
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold leading-7">
                   {currentAnswer.question_text}

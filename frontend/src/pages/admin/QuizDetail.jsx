@@ -17,9 +17,9 @@ import Badge from "../../components/common/Badge";
 import { statusColor, getErrorMessage } from "../../utils/helpers";
 import { getQuestionReports, updateQuestionReport } from "../../api/admin.api";
 
-function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
+function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onClose }) {
   const [text, setText] = useState(question?.question_text || "");
-  const [marks, setMarks] = useState(question?.marks || 1);
+  const [marks, setMarks] = useState(question?.marks || defaultMarks || 1);
   const [explanation, setExplanation] = useState(question?.explanation || "");
   const [questionImage, setQuestionImage] = useState(question?.question_image_url || "");
   const [explanationImage, setExplanationImage] = useState(question?.explanation_image_url || "");
@@ -239,7 +239,7 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
   );
 }
 
-function AiImportModal({ quizId, isLive, onImported, onClose }) {
+function AiImportModal({ quizId, isLive, defaultMarks, onImported, onClose }) {
   const fileRef = useRef(null);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
@@ -292,7 +292,7 @@ function AiImportModal({ quizId, isLive, onImported, onClose }) {
           continue;
         await addQuestion(quizId, {
           question_text: item.question_text.trim(),
-          marks: Number(item.marks) || 1,
+          marks: Number(item.marks) || Number(defaultMarks) || 1,
           explanation: item.explanation || "",
           difficulty: item.difficulty || null,
           time_limit_seconds: isLive ? item.time_limit_seconds : null,
@@ -732,6 +732,7 @@ export default function QuizDetail() {
           question={questionModal.id ? questionModal : null}
           quizId={id}
           isLive={isLive}
+          defaultMarks={quiz?.default_question_marks}
           onSave={() => {
             setQuestionModal(null);
             fetchAll();
@@ -743,6 +744,7 @@ export default function QuizDetail() {
         <AiImportModal
           quizId={id}
           isLive={isLive}
+          defaultMarks={quiz?.default_question_marks}
           onImported={() => {
             setAiOpen(false);
             fetchAll();

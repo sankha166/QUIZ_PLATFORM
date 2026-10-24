@@ -114,7 +114,7 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
 
 const submit = async (qid, uid, { attemptId, answers }) => {
   const result = await query(
-    `SELECT a.*,q.passing_score,q.id quiz_id,q.is_live_quiz
+    `SELECT a.*,q.passing_score,q.negative_marking_percent,q.id quiz_id,q.is_live_quiz
      FROM attempts a JOIN quizzes q ON q.id=a.quiz_id
      WHERE a.id=$1 AND a.user_id=$2 AND a.quiz_id=$3`,
     [attemptId, uid, qid],
@@ -138,7 +138,7 @@ const submit = async (qid, uid, { attemptId, answers }) => {
   const submission = await scoringService.calculateResult(
     attemptId,
     answers,
-    { id: attempt.quiz_id, passing_score: attempt.passing_score },
+    { id: attempt.quiz_id, passing_score: attempt.passing_score, negative_marking_percent: attempt.negative_marking_percent },
   );
   try {
     const quiz = await query('SELECT title FROM quizzes WHERE id=$1', [qid]);
@@ -157,7 +157,8 @@ const submit = async (qid, uid, { attemptId, answers }) => {
 const getMyAttempts = async (uid) => {
   const domainId = await preferred(uid);
   const result = await query(
-    `SELECT a.*,q.title quiz_title,q.duration,q.passing_score,q.is_live_quiz,
+    `SELECT a.*,q.title quiz_title,q.duration,q.passing_score,q.negative_marking_percent,q.is_live_quiz,
+            (SELECT COALESCE(SUM(marks),0) FROM questions tq WHERE tq.quiz_id=q.id) total_marks,
             c.name category_name,c.domain_id,dm.name domain_name
      FROM attempts a
      JOIN quizzes q ON q.id=a.quiz_id
@@ -174,7 +175,8 @@ const getMyAttempts = async (uid) => {
 
 const getAttemptById = async (aid, uid) => {
   const attemptResult = await query(
-    `SELECT a.*,q.title quiz_title,q.passing_score,q.duration,q.is_live_quiz,
+    `SELECT a.*,q.title quiz_title,q.passing_score,q.negative_marking_percent,q.duration,q.is_live_quiz,
+            (SELECT COALESCE(SUM(marks),0) FROM questions tq WHERE tq.quiz_id=q.id) total_marks,
             c.name category_name,c.domain_id,dm.name domain_name
      FROM attempts a
      JOIN quizzes q ON q.id=a.quiz_id
@@ -192,7 +194,7 @@ const getAttemptById = async (aid, uid) => {
   const attempt = attemptResult.rows[0];
   const answerResult = await query(
     `SELECT q.id question_id,ans.id answer_id,ans.selected_option_id,ans.is_correct,
-            COALESCE(ans.time_taken,0) time_taken,q.question_text,q.explanation,q.question_image_url,q.explanation_image_url,q.marks,
+            COALESCE(ans.time_taken,0) time_taken,COALESCE(ans.marks_awarded,0) marks_awarded,q.question_text,q.explanation,q.question_image_url,q.explanation_image_url,q.marks,
             sel.option_text selected_option_text,
             COALESCE((
               SELECT json_agg(
