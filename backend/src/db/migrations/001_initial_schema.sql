@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS options (
   id          SERIAL PRIMARY KEY,
   question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   option_text TEXT NOT NULL,
-  is_correct  BOOLEAN NOT NULL DEFAULT FALSE
+  is_correct  BOOLEAN NOT NULL DEFAULT FALSE,
+  image_url   TEXT
 );
 
 -- Attempts table
@@ -81,6 +82,20 @@ CREATE TABLE IF NOT EXISTS answers (
   selected_option_id INTEGER REFERENCES options(id),
   is_correct         BOOLEAN,
   UNIQUE (attempt_id, question_id)
+);
+
+CREATE TABLE IF NOT EXISTS question_reports (
+  id SERIAL PRIMARY KEY,
+  question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  attempt_id INTEGER NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason VARCHAR(30) NOT NULL CHECK (reason IN ('wrong_answer','unclear','typo','image_issue','other')),
+  details TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewing','resolved','dismissed')),
+  admin_note TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (question_id, attempt_id, user_id)
 );
 
 -- Password reset tokens table

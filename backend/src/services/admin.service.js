@@ -37,7 +37,11 @@ const getAttemptById = async (id) => {
   }
   const answersResult = await query(
     `SELECT ans.*,q.question_text,q.explanation,
-       sel.option_text AS selected_option_text,cor.option_text AS correct_option_text
+       sel.option_text AS selected_option_text,cor.option_text AS correct_option_text,
+       q.question_image_url,q.explanation_image_url,
+       sel.image_url AS selected_option_image_url,cor.image_url AS correct_option_image_url,
+       COALESCE((SELECT json_agg(json_build_object('id',o.id,'option_text',o.option_text,'image_url',o.image_url,'is_correct',o.is_correct) ORDER BY o.id) FROM options o WHERE o.question_id=q.id),'[]'::json) AS options,
+       COALESCE((SELECT json_agg(json_build_object('id',r.id,'reason',r.reason,'details',r.details,'status',r.status,'admin_note',r.admin_note,'created_at',r.created_at) ORDER BY r.created_at DESC) FROM question_reports r WHERE r.question_id=q.id AND r.attempt_id=$1),'[]'::json) AS reports
      FROM answers ans JOIN questions q ON q.id=ans.question_id
      JOIN quizzes z ON z.id=q.quiz_id
      LEFT JOIN options sel ON sel.id=ans.selected_option_id
@@ -110,4 +114,21 @@ const getAnalytics = async ({ domain_id = null } = {}) => {
   };
 };
 
-module.exports = { getAllAttempts, getAttemptById, getAnalytics };
+const getQuestionReports = async ({ status = '', quizId = '' } = {}) => {
+  const params = [];
+  const filters = [];
+  if (status) { params.push(status); filters.push(`r.status=$${params.length}`); }
+  if (quizId) { params.push(quizId); filters.push(`q.quiz_id=$${params.length}`); }
+  const result = await query(`SELECT r.*,q.question_text,q.quiz_id,z.title quiz_title,u.name student_name,u.email student_email
+    FROM question_reports r JOIN questions q ON q.id=r.question_id JOIN quizzes z ON z.id=q.quiz_id JOIN users u ON u.id=r.user_id
+    ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''} ORDER BY r.created_at DESC`, params);
+  return result.rows;
+};
+const updateQuestionReport = async (id, { status, admin_note }) => {
+  if (!['open','reviewing','resolved','dismissed'].includes(status)) { const e = new Error('Invalid report status'); e.status = 400; throw e; }
+  const result = await query('UPDATE question_reports SET status=$1,admin_note=$2,updated_at=NOW() WHERE id=$3 RETURNING *',[status,String(admin_note || '').trim().slice(0,2000) || null,id]);
+  if (!result.rows.length) { const e = new Error('Question report not found'); e.status = 404; throw e; }
+  return result.rows[0];
+};
+
+module.exports = { getAllAttempts, getAttemptById, getAnalytics, getQuestionReports, updateQuestionReport };

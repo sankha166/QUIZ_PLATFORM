@@ -15,6 +15,7 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import Badge from "../../components/common/Badge";
 import { statusColor, getErrorMessage } from "../../utils/helpers";
+import { getQuestionReports, updateQuestionReport } from "../../api/admin.api";
 
 function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
   const [text, setText] = useState(question?.question_text || "");
@@ -28,8 +29,9 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
       ? question.options.map((o) => ({
           text: o.option_text,
           correct: o.is_correct,
+          image: o.image_url || "",
         }))
-      : Array.from({ length: 4 }, () => ({ text: "", correct: false })),
+      : Array.from({ length: 4 }, () => ({ text: "", correct: false, image: "" })),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +70,7 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
         options: valid.map((o) => ({
           option_text: o.text.trim(),
           is_correct: o.correct,
+          image_url: o.image,
         })),
       };
       if (question) await updateQuestion(question.id, payload);
@@ -169,7 +172,8 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
             <label className="label">Options</label>
             <div className="space-y-2">
               {options.map((o, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="rounded-xl border border-slate-200 p-2">
+                  <div className="flex gap-2">
                   <input
                     type="radio"
                     checked={o.correct}
@@ -179,6 +183,12 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
                       )
                     }
                   />
+                  </div>
+                  <div className="mt-2" onPaste={(event) => pasteImage(event, (image) => setOptions((x) => x.map((v, j) => j === i ? { ...v, image } : v)))}>
+                    <input type="url" className="input w-full text-xs" placeholder="Option image URL or paste an image" value={o.image?.startsWith("data:") ? "" : o.image || ""} onChange={(e) => setOptions((x) => x.map((v, j) => j === i ? { ...v, image: e.target.value } : v))} />
+                    <input type="file" accept="image/*" className="mt-1 w-full text-xs" onChange={(e) => readImage(e.target.files?.[0], (image) => setOptions((x) => x.map((v, j) => j === i ? { ...v, image } : v)))} />
+                    {o.image && <img src={o.image} alt={`Option ${i + 1} preview`} className="mt-2 max-h-20 rounded border object-contain" />}
+                  </div>
                   <input
                     className="input min-w-0 flex-1"
                     placeholder={`Option ${i + 1}`}
@@ -208,7 +218,7 @@ function QuestionFormModal({ question, quizId, isLive, onSave, onClose }) {
             <button
               type="button"
               onClick={() =>
-                setOptions((x) => [...x, { text: "", correct: false }])
+                setOptions((x) => [...x, { text: "", correct: false, image: "" }])
               }
               className="mt-2 text-sm text-indigo-600"
             >
@@ -447,13 +457,19 @@ export default function QuizDetail() {
   const [aiOpen, setAiOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteQuizOpen, setDeleteQuizOpen] = useState(false);
+  const [reports, setReports] = useState([]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [q, qs] = await Promise.all([getQuizById(id), getQuestions(id)]);
+      const [q, qs, reportResponse] = await Promise.all([
+        getQuizById(id),
+        getQuestions(id),
+        getQuestionReports({ quizId: id }),
+      ]);
       setQuiz(q.data.quiz);
       setQuestions(qs.data.questions || []);
+      setReports(reportResponse.data.reports || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -582,6 +598,49 @@ export default function QuizDetail() {
               {isLive ? "Live Questions" : "Questions"} ({questions.length})
             </h3>
           </div>
+          {reports.length > 0 && (
+            <div className="card space-y-4">
+              <div>
+                <h3 className="font-semibold">Question reports ({reports.length})</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Review student feedback and track corrections for this quiz.
+                </p>
+              </div>
+              <div className="space-y-3">
+                {reports.map((report) => (
+                  <div key={report.id} className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{report.question_text}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Reported by {report.student_name || report.student_email} · {report.reason.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      <select
+                        className="input w-auto py-1 text-xs"
+                        value={report.status}
+                        onChange={async (event) => {
+                          try {
+                            const response = await updateQuestionReport(report.id, { status: event.target.value, admin_note: report.admin_note });
+                            setReports((items) => items.map((item) => item.id === report.id ? { ...item, ...response.data.report } : item));
+                          } catch (error) {
+                            alert(getErrorMessage(error));
+                          }
+                        }}
+                      >
+                        <option value="open">Open</option>
+                        <option value="reviewing">Reviewing</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="dismissed">Dismissed</option>
+                      </select>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-700">{report.details}</p>
+                    {report.admin_note && <p className="mt-2 text-xs text-slate-500">Admin note: {report.admin_note}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {questions.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               No questions yet.
@@ -621,8 +680,8 @@ export default function QuizDetail() {
                             key={o.id}
                             className={`rounded-xl border p-2 text-sm ${o.is_correct ? "border-emerald-200 bg-emerald-50 text-emerald-700" : ""}`}
                           >
-                            {o.is_correct ? "✓ " : ""}
-                            {o.option_text}
+                            <div>{o.is_correct ? "✓ " : ""}{o.option_text}</div>
+                            {o.image_url && <img src={o.image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                           </div>
                         ))}
                       </div>

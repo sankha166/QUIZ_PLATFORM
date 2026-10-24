@@ -4,7 +4,7 @@ const getByQuiz = async (quizId, includeCorrect = false) => {
   const questions = await query(`SELECT q.*, COUNT(o.id)::int option_count FROM questions q LEFT JOIN options o ON o.question_id=q.id WHERE q.quiz_id=$1 GROUP BY q.id ORDER BY q.id`, [quizId]);
   const result = [];
   for (const q of questions.rows) {
-    const opts = await query(`SELECT id,option_text ${includeCorrect ? ', is_correct' : ''} FROM options WHERE question_id=$1 ORDER BY id`, [q.id]);
+    const opts = await query(`SELECT id,option_text,image_url ${includeCorrect ? ', is_correct' : ''} FROM options WHERE question_id=$1 ORDER BY id`, [q.id]);
     result.push({ ...q, options: opts.rows });
   }
   return result;
@@ -32,7 +32,7 @@ const add = async (quizId, { question_text, marks, explanation, difficulty, time
     const liveTime = await resolveLiveTime(quizId, time_limit_seconds);
     const qr = await client.query(`INSERT INTO questions(quiz_id,question_text,marks,explanation,difficulty,time_limit_seconds,question_image_url,explanation_image_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [quizId, question_text, marks || 1, explanation || null, difficulty || null, liveTime, question_image_url || null, explanation_image_url || null]);
     const question = qr.rows[0], inserted = [];
-    for (const o of options) { const r = await client.query('INSERT INTO options(question_id,option_text,is_correct) VALUES($1,$2,$3) RETURNING *', [question.id, o.option_text, o.is_correct || false]); inserted.push(r.rows[0]); }
+    for (const o of options) { const r = await client.query('INSERT INTO options(question_id,option_text,is_correct,image_url) VALUES($1,$2,$3,$4) RETURNING *', [question.id, o.option_text, o.is_correct || false, o.image_url || null]); inserted.push(r.rows[0]); }
     await client.query('COMMIT');
     return { ...question, options: inserted };
   } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
@@ -50,7 +50,7 @@ const update = async (id, { question_text, marks, explanation, difficulty, time_
     if (options && options.length >= 2) {
       validate(options);
       await client.query('DELETE FROM options WHERE question_id=$1', [id]);
-      for (const o of options) { const r = await client.query('INSERT INTO options(question_id,option_text,is_correct) VALUES($1,$2,$3) RETURNING *', [id, o.option_text, o.is_correct || false]); inserted.push(r.rows[0]); }
+      for (const o of options) { const r = await client.query('INSERT INTO options(question_id,option_text,is_correct,image_url) VALUES($1,$2,$3,$4) RETURNING *', [id, o.option_text, o.is_correct || false, o.image_url || null]); inserted.push(r.rows[0]); }
     } else {
       const r = await client.query('SELECT * FROM options WHERE question_id=$1 ORDER BY id', [id]); inserted = r.rows;
     }

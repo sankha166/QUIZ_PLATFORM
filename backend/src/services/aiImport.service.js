@@ -90,6 +90,7 @@ function normalizeQuestions(parsed) {
       options: q.options
         .map((o) => ({
           option_text: String(o.option_text || o.text || o.option || '').trim(),
+          image_url: String(o.image_url || o.imageUrl || '').trim(),
           is_correct: truthyAnswer(o.is_correct ?? o.correct ?? o.isCorrect),
         }))
         .filter((o) => o.option_text),

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getAttemptById } from "../../api/attempt.api";
-import { getQuizReview, submitQuizReview } from "../../api/reviews.api";
+import { getQuizReview, submitQuizReview, submitQuestionReport } from "../../api/reviews.api";
 import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/common/Badge";
@@ -39,6 +39,11 @@ export default function QuizResult() {
     [filter, setFilter] = useState("all"),
     [jump, setJump] = useState(""),
     [error, setError] = useState("");
+  const [reportOpen, setReportOpen] = useState(false),
+    [reportReason, setReportReason] = useState("wrong_answer"),
+    [reportDetails, setReportDetails] = useState(""),
+    [reportSending, setReportSending] = useState(false),
+    [reportMessage, setReportMessage] = useState("");
   useEffect(() => {
     let active = true;
     getAttemptById(attemptId)
@@ -119,6 +124,25 @@ export default function QuizResult() {
       console.error(e);
     } finally {
       setSending(false);
+    }
+  };
+  const sendReport = async () => {
+    if (!currentAnswer || !reportDetails.trim()) return;
+    setReportSending(true);
+    try {
+      await submitQuestionReport({
+        attemptId: Number(attemptId),
+        questionId: currentAnswer.question_id,
+        reason: reportReason,
+        details: reportDetails,
+      });
+      setReportMessage("Report submitted. Thank you for helping us improve this quiz.");
+      setReportOpen(false);
+      setReportDetails("");
+    } catch (e) {
+      setReportMessage(e?.response?.data?.message || "Unable to submit report.");
+    } finally {
+      setReportSending(false);
     }
   };
   const goToNumber = () => {
@@ -343,6 +367,7 @@ export default function QuizResult() {
                           </span>
                           <span className="flex-1 text-sm font-medium">
                             {o.option_text}
+                            {o.image_url && <img src={o.image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                           </span>
                           {selected && (
                             <span
@@ -355,6 +380,30 @@ export default function QuizResult() {
                             <span className="text-xs font-bold text-emerald-700">
                               Correct answer
                             </span>
+                          )}
+                        </div>
+                        <div className="mt-4 border-t pt-4">
+                          {reportMessage && <p className="mb-2 text-xs text-emerald-700">{reportMessage}</p>}
+                          {!reportOpen ? (
+                            <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setReportOpen(true)}>
+                              ⚑ Report an issue with this question
+                            </button>
+                          ) : (
+                            <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+                              <p className="text-sm font-semibold text-rose-800">What seems wrong?</p>
+                              <select className="input mt-2 w-full" value={reportReason} onChange={(e) => setReportReason(e.target.value)}>
+                                <option value="wrong_answer">Answer may be wrong</option>
+                                <option value="unclear">Question is unclear</option>
+                                <option value="typo">Typo or formatting issue</option>
+                                <option value="image_issue">Image or diagram issue</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <textarea className="input mt-2 w-full" rows={3} maxLength={2000} placeholder="Describe the issue..." value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} />
+                              <div className="mt-2 flex gap-2">
+                                <button className="btn-secondary" onClick={() => setReportOpen(false)}>Cancel</button>
+                                <button className="btn-primary" disabled={reportSending || !reportDetails.trim()} onClick={sendReport}>{reportSending ? "Sending…" : "Submit report"}</button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>

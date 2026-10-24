@@ -110,11 +110,13 @@ export default function AttemptDetail() {
                 <div>
                   <p className="text-slate-500">Selected answer</p>
                   <p className={`mt-1 font-medium ${answer.is_correct ? 'text-emerald-700' : 'text-rose-700'}`}>{answer.selected_option_text || 'Not answered'}</p>
+                  {answer.selected_option_image_url && <img src={answer.selected_option_image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                 </div>
                 {!answer.is_correct && (
                   <div>
                     <p className="text-slate-500">Correct answer</p>
                     <p className="mt-1 font-medium text-emerald-700">{answer.correct_option_text}</p>
+                    {answer.correct_option_image_url && <img src={answer.correct_option_image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                   </div>
                 )}
               </div>
@@ -122,6 +124,18 @@ export default function AttemptDetail() {
                 <div className="mt-4 rounded-3xl bg-white border border-slate-200 p-4 text-sm text-slate-700">
                   <p className="font-semibold text-slate-900">Explanation</p>
                   <p className="mt-2">{answer.explanation}</p>
+                </div>
+              )}
+              {answer.question_image_url && <img src={answer.question_image_url} alt="Question diagram" className="mt-4 max-h-64 w-full rounded-xl border object-contain" />}
+              {answer.reports?.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="font-semibold text-amber-900">Student reports</p>
+                  {answer.reports.map((report) => (
+                    <div key={report.id} className="mt-2 text-sm text-amber-900">
+                      <span className="font-semibold">{report.reason.replace("_", " ")}:</span> {report.details}
+                      <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs">{report.status}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

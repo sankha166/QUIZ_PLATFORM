@@ -262,6 +262,7 @@ export default function QuizAttempt() {
                     />
                     <span className="text-sm sm:text-base text-slate-800 leading-6">
                       {opt.option_text}
+                      {opt.image_url && <img src={opt.image_url} alt="" className="mt-2 max-h-28 rounded-lg object-contain" />}
                     </span>
                   </label>
                 ))}

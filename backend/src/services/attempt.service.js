@@ -160,7 +160,7 @@ const getAttemptById = async (aid, uid) => {
             sel.option_text selected_option_text,
             COALESCE((
               SELECT json_agg(
-                json_build_object('id',o.id,'option_text',o.option_text,'is_correct',o.is_correct)
+                json_build_object('id',o.id,'option_text',o.option_text,'image_url',o.image_url,'is_correct',o.is_correct)
                 ORDER BY o.id
               )
               FROM options o WHERE o.question_id=q.id

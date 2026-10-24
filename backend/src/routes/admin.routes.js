@@ -5,6 +5,8 @@ const adminOnly = require('../middleware/adminOnly');
 
 router.get('/attempts', authenticate, adminOnly, ctrl.getAllAttempts);
 router.get('/attempts/:id', authenticate, adminOnly, ctrl.getAttemptById);
+router.get('/question-reports', authenticate, adminOnly, ctrl.getQuestionReports);
+router.patch('/question-reports/:id', authenticate, adminOnly, ctrl.updateQuestionReport);
 router.get('/analytics', authenticate, adminOnly, ctrl.getAnalytics);
 
 module.exports = router;
