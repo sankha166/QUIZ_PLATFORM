@@ -1,25 +1,20 @@
 const { query, getClient } = require('../config/db');
-const { canTranslate, translateQuestion } = require('./translation.service');
+const { canTranslate, translate } = require('./translation.service');
+
+const markQuizTranslationsPending = (quizId) => query(
+  `UPDATE quizzes
+   SET translation_status='pending', translation_started_at=NULL,
+       translation_completed_at=NULL, translation_error=NULL
+   WHERE id=$1`,
+  [quizId],
+);
 
 const getByQuiz = async (quizId, includeCorrect = false) => {
   const questions = await query(`SELECT q.*, COUNT(o.id)::int option_count FROM questions q LEFT JOIN options o ON o.question_id=q.id WHERE q.quiz_id=$1 GROUP BY q.id ORDER BY q.id`, [quizId]);
   const result = [];
   for (const q of questions.rows) {
     const opts = await query(`SELECT id,option_text,option_text_translations,image_url ${includeCorrect ? ', is_correct' : ''} FROM options WHERE question_id=$1 ORDER BY id`, [q.id]);
-    let question = { ...q, options: opts.rows };
-    if (canTranslate() && (!q.question_text_translations?.hi || !q.question_text_translations?.bn || (q.explanation && (!q.explanation_translations?.hi || !q.explanation_translations?.bn)) || opts.rows.some((option) => !option.option_text_translations?.hi || !option.option_text_translations?.bn))) {
-      const localized = await translateQuestion(question);
-      await query('UPDATE questions SET question_text_translations=$1::jsonb, explanation_translations=$2::jsonb WHERE id=$3', [
-        JSON.stringify(localized.question_text_translations),
-        JSON.stringify(localized.explanation_translations),
-        q.id,
-      ]);
-      for (const option of localized.options) {
-        await query('UPDATE options SET option_text_translations=$1::jsonb WHERE id=$2', [JSON.stringify(option.option_text_translations), option.id]);
-      }
-      question = { ...question, ...localized };
-    }
-    result.push(question);
+    result.push({ ...q, options: opts.rows });
   }
   return result;
 };
@@ -40,13 +35,11 @@ const resolveLiveTime = async (quizId, requested) => {
 
 const add = async (quizId, { question_text, question_text_translations, marks, explanation, explanation_translations, difficulty, time_limit_seconds, question_image_url, explanation_image_url, options }) => {
   validate(options);
-  const localized = await translateQuestion({
-    question_text,
-    question_text_translations,
-    explanation,
-    explanation_translations,
-    options,
-  });
+  const localized = {
+    question_text_translations: { en: question_text, ...(question_text_translations || {}) },
+    explanation_translations: { en: explanation || '', ...(explanation_translations || {}) },
+    options: options.map((o) => ({ ...o, option_text_translations: { en: o.option_text, ...(o.option_text_translations || {}) } })),
+  };
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -55,6 +48,7 @@ const add = async (quizId, { question_text, question_text_translations, marks, e
     const question = qr.rows[0], inserted = [];
     for (const o of localized.options) { const r = await client.query('INSERT INTO options(question_id,option_text,option_text_translations,is_correct,image_url) VALUES($1,$2,$3::jsonb,$4,$5) RETURNING *', [question.id, o.option_text, JSON.stringify(o.option_text_translations || {}), o.is_correct || false, o.image_url || null]); inserted.push(r.rows[0]); }
     await client.query('COMMIT');
+    await markQuizTranslationsPending(quizId);
     return { ...question, options: inserted };
   } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
 };
@@ -68,13 +62,11 @@ const update = async (id, { question_text, question_text_translations, marks, ex
     const liveTime = await resolveLiveTime(existing.rows[0].quiz_id, time_limit_seconds);
     const current = await client.query('SELECT * FROM questions WHERE id=$1', [id]);
     const currentOptions = await client.query('SELECT * FROM options WHERE question_id=$1 ORDER BY id', [id]);
-    const localized = await translateQuestion({
-      question_text: question_text || current.rows[0].question_text,
-      question_text_translations: question_text_translations || current.rows[0].question_text_translations,
-      explanation: explanation === undefined ? current.rows[0].explanation : explanation,
-      explanation_translations: explanation_translations || current.rows[0].explanation_translations,
-      options: options && options.length >= 2 ? options : currentOptions.rows,
-    });
+    const localized = {
+      question_text_translations: { en: question_text || current.rows[0].question_text, ...(question_text_translations || current.rows[0].question_text_translations || {}) },
+      explanation_translations: { en: explanation === undefined ? current.rows[0].explanation || '' : explanation, ...(explanation_translations || current.rows[0].explanation_translations || {}) },
+      options: (options && options.length >= 2 ? options : currentOptions.rows).map((o) => ({ ...o, option_text_translations: { en: o.option_text, ...(o.option_text_translations || {}) } })),
+    };
     const qr = await client.query(`UPDATE questions SET question_text=COALESCE($1,question_text),question_text_translations=$2::jsonb,marks=COALESCE($3,marks),explanation=COALESCE($4,explanation),explanation_translations=$5::jsonb,difficulty=COALESCE($6,difficulty),time_limit_seconds=COALESCE($7,time_limit_seconds),question_image_url=CASE WHEN $8::text IS NULL THEN question_image_url ELSE NULLIF($8,'') END,explanation_image_url=CASE WHEN $9::text IS NULL THEN explanation_image_url ELSE NULLIF($9,'') END WHERE id=$10 RETURNING *`, [question_text, JSON.stringify(localized.question_text_translations), marks, explanation, JSON.stringify(localized.explanation_translations), difficulty, liveTime, question_image_url === undefined ? null : question_image_url, explanation_image_url === undefined ? null : explanation_image_url, id]);
     let inserted = [];
     if (options && options.length >= 2) {
@@ -85,9 +77,57 @@ const update = async (id, { question_text, question_text_translations, marks, ex
       const r = await client.query('SELECT * FROM options WHERE question_id=$1 ORDER BY id', [id]); inserted = r.rows;
     }
     await client.query('COMMIT');
+    await markQuizTranslationsPending(existing.rows[0].quiz_id);
     return { ...qr.rows[0], options: inserted };
   } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
 };
 
 const remove = async id => { const r = await query('DELETE FROM questions WHERE id=$1 RETURNING id', [id]); if (!r.rows.length) { const e = new Error('Question not found'); e.status = 404; throw e; } return { message: 'Question deleted successfully' }; };
-module.exports = { getByQuiz, add, update, remove };
+
+const translateQuiz = async (quizId, { force = false } = {}) => {
+  const claim = await query(
+    `UPDATE quizzes
+     SET translation_status='processing', translation_started_at=NOW(),
+         translation_error=NULL
+     WHERE id=$1
+       AND (
+         translation_status='pending'
+         OR ($2::boolean AND translation_status='failed')
+       )
+     RETURNING id`,
+    [quizId, force],
+  );
+  if (!claim.rows.length) {
+    const status = await query('SELECT translation_status FROM quizzes WHERE id=$1', [quizId]);
+    return { translated: 0, status: status.rows[0]?.translation_status || 'missing' };
+  }
+  const questions = await getByQuiz(quizId, false);
+  const source = {};
+  questions.forEach((question) => {
+    source[`q_${question.id}`] = question.question_text;
+    if (question.explanation) source[`e_${question.id}`] = question.explanation;
+    question.options.forEach((option) => { source[`o_${option.id}`] = option.option_text; });
+  });
+  try {
+    if (!canTranslate() || !Object.keys(source).length) {
+      await query(`UPDATE quizzes SET translation_status='failed', translation_error=$2 WHERE id=$1`, [quizId, 'Translation provider is not configured or the quiz has no translatable content.']);
+      return { translated: 0, status: 'failed' };
+    }
+    const generated = await translate(source);
+    for (const question of questions) {
+      const questionTranslations = { en: question.question_text, hi: generated.hi[`q_${question.id}`], bn: generated.bn[`q_${question.id}`] };
+      const explanationTranslations = { en: question.explanation || '', hi: generated.hi[`e_${question.id}`] || '', bn: generated.bn[`e_${question.id}`] || '' };
+      await query('UPDATE questions SET question_text_translations=$1::jsonb, explanation_translations=$2::jsonb WHERE id=$3', [JSON.stringify(questionTranslations), JSON.stringify(explanationTranslations), question.id]);
+      for (const option of question.options) {
+        await query('UPDATE options SET option_text_translations=$1::jsonb WHERE id=$2', [JSON.stringify({ en: option.option_text, hi: generated.hi[`o_${option.id}`], bn: generated.bn[`o_${option.id}`] }), option.id]);
+      }
+    }
+    await query(`UPDATE quizzes SET translation_status='completed', translation_completed_at=NOW(), translation_error=NULL WHERE id=$1`, [quizId]);
+    return { translated: questions.length, status: 'completed' };
+  } catch (error) {
+    await query(`UPDATE quizzes SET translation_status='failed', translation_error=$2 WHERE id=$1`, [quizId, error.message]);
+    throw error;
+  }
+};
+
+module.exports = { getByQuiz, add, update, remove, translateQuiz };

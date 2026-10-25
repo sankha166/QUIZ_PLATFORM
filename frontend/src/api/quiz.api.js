@@ -13,6 +13,7 @@ export const deleteQuiz = (id) => api.delete(`/quizzes/${id}`);
 export const updateQuizStatus = (id, status) => api.patch(`/quizzes/${id}/publish`, { status });
 
 export const getQuestions = (quizId) => api.get(`/quizzes/${quizId}/questions`);
+export const translateQuizQuestions = (quizId) => api.post(`/quizzes/${quizId}/questions/translate`);
 export const addQuestion = (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data);
 export const updateQuestion = (id, data) => api.put(`/questions/${id}`, data);
 export const deleteQuestion = (id) => api.delete(`/questions/${id}`);

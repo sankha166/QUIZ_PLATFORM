@@ -31,4 +31,10 @@ const remove = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getByQuiz, add, update, remove };
+const translateQuiz = async (req, res, next) => {
+  try {
+    res.json({ success: true, ...(await questionService.translateQuiz(req.params.quizId, { force: true })) });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getByQuiz, add, update, remove, translateQuiz };

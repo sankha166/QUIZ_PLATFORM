@@ -105,4 +105,4 @@ const translateQuestion = async (question) => {
   };
 };
 
-module.exports = { canTranslate, fillTranslations, translateQuestion };
+module.exports = { canTranslate, fillTranslations, translate, translateQuestion };

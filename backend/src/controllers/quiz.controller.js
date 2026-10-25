@@ -1,5 +1,6 @@
 const quizService = require('../services/quiz.service');
 const quizListingService = require('../services/quizListing.service');
+const questionService = require('../services/question.service');
 const { query } = require('../config/db');
 
 const getStudentPreferredDomain = async (userId) => {
@@ -56,7 +57,17 @@ const cleanQuizTimestamps = (body) => {
 };
 
 const update = async (req, res, next) => { try { res.json({ success: true, quiz: await quizService.update(req.params.id, cleanQuizTimestamps(req.body) ) }); } catch (e) { next(e); } };
-const updateStatus = async (req, res, next) => { try { res.json({ success: true, quiz: await quizService.updateStatus(req.params.id, req.body.status) }); } catch (e) { next(e); } };
+const updateStatus = async (req, res, next) => {
+  try {
+    const quiz = await quizService.updateStatus(req.params.id, req.body.status);
+    res.json({ success: true, quiz });
+    if (req.body.status === 'published') {
+      questionService.translateQuiz(req.params.id).catch((error) => {
+        console.error(`Unable to pre-translate published quiz ${req.params.id}:`, error.message);
+      });
+    }
+  } catch (e) { next(e); }
+};
 const remove = async (req, res, next) => { try { res.json({ success: true, ...await quizService.remove(req.params.id) }); } catch (e) { next(e); } };
 
 const escapeHtml = (value) => String(value || '')

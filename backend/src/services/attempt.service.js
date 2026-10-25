@@ -194,8 +194,6 @@ const getAttemptById = async (aid, uid) => {
   }
 
   const attempt = attemptResult.rows[0];
-  // Backfill translations for older questions before returning their result review.
-  await questionService.getByQuiz(attempt.quiz_id, false);
   const answerResult = await query(
     `SELECT q.id question_id,ans.id answer_id,ans.selected_option_id,ans.is_correct,
             COALESCE(ans.time_taken,0) time_taken,COALESCE(ans.marks_awarded,0) marks_awarded,q.question_text,q.question_text_translations,q.explanation,q.explanation_translations,q.question_image_url,q.explanation_image_url,q.marks,

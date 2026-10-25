@@ -5,6 +5,7 @@ const adminOnly = require('../middleware/adminOnly');
 
 // GET /api/quizzes/:quizId/questions — admin sees correct answers, students don't
 router.get('/:quizId/questions', authenticate, ctrl.getByQuiz);
+router.post('/:quizId/questions/translate', authenticate, adminOnly, ctrl.translateQuiz);
 // POST /api/quizzes/:quizId/questions — admin only
 router.post('/:quizId/questions', authenticate, adminOnly, ctrl.add);
 
