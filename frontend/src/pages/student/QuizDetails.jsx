@@ -213,8 +213,7 @@ export default function QuizDetails() {
             <p className="text-xs font-bold uppercase tracking-widest text-indigo-600">Quick guide {tourStep + 1}/{tourSteps.length}</p>
             <h2 className="mt-2 text-2xl font-bold">{tourSteps[tourStep][0]}</h2>
             <p className="mt-5 text-sm leading-6 text-slate-600">{tourSteps[tourStep][1]}</p>
-            <div className="mt-6 flex items-center justify-between gap-2">
-              <button className="text-sm font-semibold text-slate-500 hover:underline" onClick={() => setTourOpen(false)}>Skip guide</button>
+            <div className="mt-6 flex items-center justify-end gap-2">
               <button className="btn-primary" onClick={() => tourStep < tourSteps.length - 1 ? setTourStep((step) => step + 1) : setTourOpen(false)}>{tourStep < tourSteps.length - 1 ? 'Next' : 'Got it, start when ready'}</button>
             </div>
           </div>

@@ -56,7 +56,7 @@ export default function StudentLayout({ children }) {
       <header className="glass-header sticky top-0 z-50">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:h-[68px] sm:px-6 lg:px-8">
           <button type="button" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMobileOpen(v => !v)} className="btn-icon lg:hidden">{mobileOpen ? <X size={18} strokeWidth={1.8} /> : <Menu size={18} strokeWidth={1.8} />}</button>
-          <Link to="/student/dashboard" className="flex min-w-0 items-center gap-2.5 sm:gap-3"><img src="/logo1.png" alt="Quizora" className="h-9 w-9 rounded-[10px] object-cover sm:h-10 sm:w-10"/><div className="hidden min-w-0 sm:block"><div className="truncate text-[15px] font-semibold tracking-[-0.015em]">Quizora</div><div className="text-[11px] font-medium text-slate-400">Student Portal</div></div></Link>
+          <Link to="/student/dashboard" className="flex min-w-0 items-center gap-2.0 sm:gap-3"><img src="/logo1.png" alt="Quizora" className="h-8 w-8 shrink-0 rounded-[10px] object-cover sm:h-10 sm:w-10"/><div className="min-w-0"><div className="truncate text-[20px] font-semibold tracking-[-0.015em]">Quizora</div><div className="hidden text-[11px] font-medium text-slate-400 sm:block">Student Portal</div></div></Link>
 
           <nav className="ml-5 hidden flex-1 items-center gap-0.5 lg:flex">
             <NavLink to="/student/dashboard" active={isActive('/student/dashboard')} icon={LayoutDashboard}>Dashboard</NavLink>

@@ -1304,11 +1304,11 @@ export default function StudentDashboard() {
             </div>
 
             <Link
-              to="/student/quizzes"
-              className="inline-flex w-fit items-center gap-2 rounded-2xl bg-white/15 px-5 py-3 text-sm font-semibold backdrop-blur-sm transition hover:bg-white/25"
-            >
-              Start a quiz
-            </Link>
+  to="/student/quizzes"
+  className="inline-flex w-fit items-center gap-2 rounded-2xl border border-black bg-white/15 px-5 py-3 text-sm font-semibold backdrop-blur-sm transition hover:bg-white/25"
+>
+  Start a quiz
+</Link>
 
           </div>
         </div>
