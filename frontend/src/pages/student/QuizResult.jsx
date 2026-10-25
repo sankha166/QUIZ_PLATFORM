@@ -6,6 +6,7 @@ import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/common/Badge";
 import { formatTime, formatDate, statusColor } from "../../utils/helpers";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 import {
   Bar,
   BarChart,
@@ -31,6 +32,7 @@ const moods = [
   ["angry", "😞", "Not satisfied"],
 ];
 export default function QuizResult() {
+  const { language, t } = useLanguage();
   const { attemptId } = useParams(),
     [attempt, setAttempt] = useState(null),
     [loading, setLoading] = useState(true),
@@ -128,6 +130,7 @@ export default function QuizResult() {
   const [current, setCurrent] = useState(0);
   useEffect(() => setCurrent(0), [filter]);
   const currentAnswer = filtered[current];
+  const localizedExplanation = localizedValue(currentAnswer, "explanation", language);
   const sendReview = async () => {
     if (!mood) return;
     setSending(true);
@@ -192,7 +195,7 @@ export default function QuizResult() {
             to="/student/attempts"
             className="btn-primary inline-block mt-5"
           >
-            ← Back
+            ← {t("Back")}
           </Link>
         </div>
       </StudentLayout>
@@ -209,7 +212,7 @@ export default function QuizResult() {
             to="/student/quizzes"
             className="text-sm font-semibold text-indigo-600"
           >
-            All Quizzes
+            {t("All Quizzes")}
           </Link>
         </div>
         <div
@@ -218,14 +221,14 @@ export default function QuizResult() {
           <div className="text-center">
             <div className="text-5xl">{passed ? "🏆" : "📚"}</div>
             <p className="mt-3 text-xs uppercase tracking-[.25em] font-semibold text-indigo-600">
-              Assessment complete
+              {t("Assessment complete")}
             </p>
             <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold break-words">
-              {attempt.quiz_title}
+              {localizedValue({ title: attempt.quiz_title, title_translations: attempt.title_translations }, "title", language)}
             </h1>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Badge className={`px-4 py-2 ${statusColor(attempt.status)}`}>
-                {passed ? "✓ PASSED" : "✕ FAILED"}
+                {passed ? `✓ ${t("Passed")}` : `✕ ${t("Failed")}`}
               </Badge>
               <span className="rounded-full bg-white/80 border px-4 py-2 text-sm text-slate-600">
                 {formatDate(attempt.completed_at)}
@@ -241,10 +244,10 @@ export default function QuizResult() {
           </div>
           <div className="mt-7 grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              ["Correct", attempt.correct_answers, "text-emerald-600"],
-              ["Incorrect", attempt.incorrect_answers, "text-rose-600"],
-              ["Unanswered", attempt.unanswered, "text-slate-700"],
-              ["Total time", formatTime(attempt.time_taken), "text-indigo-600"],
+              [t("Correct"), attempt.correct_answers, "text-emerald-600"],
+              [t("Incorrect"), attempt.incorrect_answers, "text-rose-600"],
+              [t("Unanswered"), attempt.unanswered, "text-slate-700"],
+              [t("Total time"), formatTime(attempt.time_taken), "text-indigo-600"],
             ].map(([l, v, c]) => (
               <div key={l} className="rounded-2xl bg-white/90 border p-4">
                 <p className="text-xs text-slate-500">{l}</p>
@@ -271,8 +274,8 @@ export default function QuizResult() {
         <section className="card overflow-hidden">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow text-indigo-600">Performance dashboard</p>
-              <h2 className="mt-1 text-xl font-bold sm:text-2xl">Your complete analysis</h2>
+              <p className="eyebrow text-indigo-600">{t("Performance dashboard")}</p>
+              <h2 className="mt-1 text-xl font-bold sm:text-2xl">{t("Your complete analysis")}</h2>
               <p className="mt-1 text-sm text-slate-500">See accuracy, pace, question-level performance, and how you compare with everyone who attempted this quiz.</p>
             </div>
             {rank && <div className="rounded-2xl bg-indigo-50 px-4 py-3 text-center dark:bg-indigo-500/10"><p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600">Your rank</p><p className="text-2xl font-black text-indigo-700 dark:text-indigo-300">#{rank}<span className="text-sm font-medium text-slate-500"> / {comparison.completed_attempts}</span></p></div>}
@@ -341,7 +344,7 @@ export default function QuizResult() {
         <section className="card">
           <div className="flex flex-col gap-4">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold">Question Review</h2>
+              <h2 className="text-xl sm:text-2xl font-bold">{t("Question Review")}</h2>
               <p className="text-sm text-slate-500 mt-1">
                 Review every option one question at a time.
               </p>
@@ -399,7 +402,7 @@ export default function QuizResult() {
                   Marks awarded: {Number(currentAnswer.marks_awarded || 0).toFixed(2)} / {Number(currentAnswer.marks || 0).toFixed(2)}
                 </div>
                 <h3 className="text-base sm:text-lg font-semibold leading-7">
-                  {currentAnswer.question_text}
+                  {localizedValue(currentAnswer, "question_text", language)}
                 </h3>
                 {currentAnswer.question_image_url && (
                   <img src={currentAnswer.question_image_url} alt="Question diagram" className="mt-4 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
@@ -420,7 +423,7 @@ export default function QuizResult() {
                             {String.fromCharCode(65 + i)}
                           </span>
                           <span className="flex-1 text-sm font-medium">
-                            {o.option_text}
+                            {localizedValue(o, "option_text", language)}
                             {o.image_url && <img src={o.image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                           </span>
                           {selected && (
@@ -469,12 +472,12 @@ export default function QuizResult() {
                     </div>
                   )}
                 </div>
-                {(currentAnswer.explanation || currentAnswer.explanation_image_url) && (
+                {(localizedExplanation || currentAnswer.explanation_image_url) && (
                   <div className="mt-4 rounded-xl bg-indigo-50 border border-indigo-100 p-4">
                     <b className="text-indigo-700">💡 Explanation</b>
-                    {currentAnswer.explanation && (
+                    {localizedExplanation && (
                       <p className="mt-1 text-sm text-slate-600">
-                        {currentAnswer.explanation}
+                        {localizedValue(currentAnswer, "explanation", language)}
                       </p>
                     )}
                     {currentAnswer.explanation_image_url && (

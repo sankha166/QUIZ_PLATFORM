@@ -19,8 +19,12 @@ import { getQuestionReports, updateQuestionReport } from "../../api/admin.api";
 
 function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onClose }) {
   const [text, setText] = useState(question?.question_text || "");
+  const [textHi, setTextHi] = useState(question?.question_text_translations?.hi || "");
+  const [textBn, setTextBn] = useState(question?.question_text_translations?.bn || "");
   const [marks, setMarks] = useState(question?.marks || defaultMarks || 1);
   const [explanation, setExplanation] = useState(question?.explanation || "");
+  const [explanationHi, setExplanationHi] = useState(question?.explanation_translations?.hi || "");
+  const [explanationBn, setExplanationBn] = useState(question?.explanation_translations?.bn || "");
   const [questionImage, setQuestionImage] = useState(question?.question_image_url || "");
   const [explanationImage, setExplanationImage] = useState(question?.explanation_image_url || "");
   const [time, setTime] = useState(question?.time_limit_seconds || 30);
@@ -30,8 +34,10 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
           text: o.option_text,
           correct: o.is_correct,
           image: o.image_url || "",
+          hi: o.option_text_translations?.hi || "",
+          bn: o.option_text_translations?.bn || "",
         }))
-      : Array.from({ length: 4 }, () => ({ text: "", correct: false, image: "" })),
+      : Array.from({ length: 4 }, () => ({ text: "", hi: "", bn: "", correct: false, image: "" })),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -62,13 +68,16 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
     try {
       const payload = {
         question_text: text.trim(),
+        question_text_translations: { en: text.trim(), hi: textHi.trim(), bn: textBn.trim() },
         marks: Number(marks) || 1,
         explanation: explanation.trim(),
+        explanation_translations: { en: explanation.trim(), hi: explanationHi.trim(), bn: explanationBn.trim() },
         question_image_url: questionImage,
         explanation_image_url: explanationImage,
         time_limit_seconds: isLive ? Number(time) : null,
         options: valid.map((o) => ({
           option_text: o.text.trim(),
+          option_text_translations: { en: o.text.trim(), hi: o.hi.trim(), bn: o.bn.trim() },
           is_correct: o.correct,
           image_url: o.image,
         })),
@@ -115,6 +124,10 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input className="input text-sm" placeholder="Hindi question (optional)" value={textHi} onChange={(e) => setTextHi(e.target.value)} />
+              <input className="input text-sm" placeholder="Bengali question (optional)" value={textBn} onChange={(e) => setTextBn(e.target.value)} />
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -153,6 +166,10 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
             />
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input className="input text-sm" placeholder="Hindi explanation (optional)" value={explanationHi} onChange={(e) => setExplanationHi(e.target.value)} />
+              <input className="input text-sm" placeholder="Bengali explanation (optional)" value={explanationBn} onChange={(e) => setExplanationBn(e.target.value)} />
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div onPaste={(event) => pasteImage(event, setQuestionImage)}>
@@ -183,6 +200,10 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
                       )
                     }
                   />
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <input className="input text-sm" placeholder="Hindi option (optional)" value={o.hi} onChange={(e) => setOptions((x) => x.map((v, j) => j === i ? { ...v, hi: e.target.value } : v))} />
+                    <input className="input text-sm" placeholder="Bengali option (optional)" value={o.bn} onChange={(e) => setOptions((x) => x.map((v, j) => j === i ? { ...v, bn: e.target.value } : v))} />
+                  </div>
                   </div>
                   <div className="mt-2" onPaste={(event) => pasteImage(event, (image) => setOptions((x) => x.map((v, j) => j === i ? { ...v, image } : v)))}>
                     <input type="url" className="input w-full text-xs" placeholder="Option image URL or paste an image" value={o.image?.startsWith("data:") ? "" : o.image || ""} onChange={(e) => setOptions((x) => x.map((v, j) => j === i ? { ...v, image: e.target.value } : v))} />
@@ -218,7 +239,7 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
             <button
               type="button"
               onClick={() =>
-                setOptions((x) => [...x, { text: "", correct: false, image: "" }])
+                setOptions((x) => [...x, { text: "", hi: "", bn: "", correct: false, image: "" }])
               }
               className="mt-2 text-sm text-indigo-600"
             >

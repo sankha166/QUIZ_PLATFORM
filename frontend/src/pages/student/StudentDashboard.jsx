@@ -18,6 +18,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { useAuth } from '../../hooks/useAuth';
+import { localizedValue, useLanguage } from '../../context/LanguageContext';
 
 import {
   FaBullseye,
@@ -457,6 +458,7 @@ function BadgeChip({ badge }) {
 /* ------------------------------------------------------------------ */
 
 export default function StudentDashboard() {
+  const { language } = useLanguage();
   const { user } = useAuth();
 
   const [attempts, setAttempts] = useState([]);
@@ -944,9 +946,7 @@ export default function StudentDashboard() {
       .slice(-10)
       .map((a, index) => ({
         name:
-          a.quiz_title ||
-          a.title ||
-          `Quiz ${index + 1}`,
+          localizedValue({ title: a.quiz_title || a.title || `Quiz ${index + 1}`, title_translations: a.title_translations }, 'title', language),
 
         shortName: formatDate(
           a.completed_at
@@ -2252,9 +2252,7 @@ export default function StudentDashboard() {
                     <div className="min-w-0 flex-1">
 
                       <p className="truncate font-semibold text-slate-900">
-                        {a.quiz_title ||
-                          a.title ||
-                          'Quiz'}
+                        {localizedValue({ title: a.quiz_title || a.title || 'Quiz', title_translations: a.title_translations }, 'title', language)}
                       </p>
 
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">

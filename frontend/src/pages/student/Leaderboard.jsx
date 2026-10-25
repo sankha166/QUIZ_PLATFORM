@@ -8,6 +8,7 @@ import ErrorState from "../../components/common/ErrorState";
 import EmptyState from "../../components/common/EmptyState";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPercent } from "../../utils/helpers";
+import { useLanguage } from "../../context/LanguageContext";
 const medals = ["🥇", "🥈", "🥉"];
 function StudentAvatar({ entry, size = "h-10 w-10" }) {
   const [failed, setFailed] = useState(false);
@@ -32,6 +33,7 @@ function StudentAvatar({ entry, size = "h-10 w-10" }) {
 }
 export default function Leaderboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [board, setBoard] = useState([]),
     [categories, setCategories] = useState([]),
     [loading, setLoading] = useState(true),
@@ -68,38 +70,38 @@ export default function Leaderboard() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-                Leaderboard
+                {t("Leaderboard")}
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Compare your performance with other learners.
+                {t("Compare your performance with other learners.")}
               </p>
             </div>
             <div className="rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300 font-semibold text-center">
-              {currentRank ? `Your rank: #${currentRank}` : "Not ranked yet"}
+              {currentRank ? `${t("Your rank")}: #${currentRank}` : t("Not ranked yet")}
             </div>
           </div>
         </div>
         <div className="card p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
-            <p className="label text-xs">Leaderboard type</p>
+            <p className="label text-xs">{t("Leaderboard type")}</p>
             <select
               className="input w-full"
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
-              <option value="overall">Overall</option>
-              <option value="category">By Category</option>
+              <option value="overall">{t("Overall")}</option>
+              <option value="category">{t("By Category")}</option>
             </select>
           </div>
           {type === "category" && (
             <div>
-              <p className="label text-xs">Category</p>
+              <p className="label text-xs">{t("Category")}</p>
               <select
                 className="input w-full"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
               >
-                <option value="">All categories</option>
+                <option value="">{t("All categories")}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -109,15 +111,15 @@ export default function Leaderboard() {
             </div>
           )}
           <div>
-            <p className="label text-xs">Time period</p>
+            <p className="label text-xs">{t("Time period")}</p>
             <select
               className="input w-full"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
             >
-              <option value="all">All time</option>
-              <option value="monthly">This month</option>
-              <option value="weekly">This week</option>
+              <option value="all">{t("All time")}</option>
+              <option value="monthly">{t("This month")}</option>
+              <option value="weekly">{t("This week")}</option>
             </select>
           </div>
         </div>
@@ -130,8 +132,8 @@ export default function Leaderboard() {
         ) : board.length === 0 ? (
           <EmptyState
             icon="🏆"
-            title="No leaderboard data"
-            message="Complete quizzes to appear here."
+            title={t("No leaderboard data")}
+            message={t("Complete quizzes to appear here.")}
           />
         ) : (
           <>

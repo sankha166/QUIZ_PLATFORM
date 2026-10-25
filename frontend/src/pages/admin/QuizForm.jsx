@@ -254,6 +254,10 @@ export default function QuizForm() {
                 className="input"
                 {...register("title", { required: "Title is required" })}
               />
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <input className="input text-sm" placeholder="Hindi title (optional)" {...register("title_translations.hi")} />
+                <input className="input text-sm" placeholder="Bengali title (optional)" {...register("title_translations.bn")} />
+              </div>
               {errors.title && (
                 <p className="mt-1 text-xs text-rose-500">
                   {errors.title.message}
@@ -267,6 +271,10 @@ export default function QuizForm() {
                 rows={4}
                 {...register("description")}
               />
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <textarea className="input text-sm" rows={2} placeholder="Hindi description (optional)" {...register("description_translations.hi")} />
+                <textarea className="input text-sm" rows={2} placeholder="Bengali description (optional)" {...register("description_translations.bn")} />
+              </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>

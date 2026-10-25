@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import StudentLayout from "../../components/student/StudentLayout";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { startLiveQuiz, answerLiveQuestion, finishLiveQuiz } from "../../api/liveQuiz.api";
 
@@ -8,6 +9,7 @@ const clampSeconds = (value) => Math.max(5, Number(value) || 30);
 const serverNow = (offset) => Date.now() + offset;
 
 export default function LiveQuizAttempt() {
+  const { language } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -150,8 +152,8 @@ export default function LiveQuizAttempt() {
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
       <div className="h-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-indigo-500 transition-[width] duration-100" style={{ width: `${((index + 1) / questions.length) * 100}%` }}/></div>
       <div className="mt-3 flex justify-between text-xs text-slate-400"><span>{limit}s answer window</span><span>{waitingForNext ? "Next question follows the shared event clock" : "Select one answer"}</span></div>
-      <h2 className="mt-6 text-lg font-medium leading-8 sm:text-xl">{q.question_text}</h2>
-      <div className="mt-6 space-y-2.5">{(q.options || []).map((o, i) => { const dist = distribution.find((x) => String(x.id) === String(o.id)); const pct = total ? Math.round((Number(dist?.chosen || 0) / total) * 100) : 0; const correct = String(reveal?.correctOptionId) === String(o.id); const mine = String(selected) === String(o.id); return <button disabled={Boolean(reveal) || submitting || Boolean(previousAnswer) || isBeforeQuestion} key={o.id} onClick={() => submitAnswer(o.id)} className={`w-full min-w-0 rounded-xl border p-3 sm:p-4 text-left transition ${reveal ? correct ? "border-emerald-400 bg-emerald-50" : mine ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-slate-50" : mine ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"}`}><div className="flex min-w-0 items-start gap-2 sm:gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs">{String.fromCharCode(65 + i)}</span><span className="min-w-0 flex-1 break-words text-sm sm:text-base">{o.option_text}</span>{reveal && <span className={`shrink-0 text-xs ${correct ? "text-emerald-700" : "text-slate-500"}`}>{pct}%{correct ? " · Correct" : ""}</span>}</div>{reveal && <div className="mt-3 h-1 overflow-hidden rounded-full bg-white"><div className={`h-full ${correct ? "bg-emerald-500" : "bg-indigo-400"}`} style={{ width: `${pct}%` }}/></div>}</button>; })}</div>
+      <h2 className="mt-6 text-lg font-medium leading-8 sm:text-xl">{localizedValue(q, "question_text", language)}</h2>
+      <div className="mt-6 space-y-2.5">{(q.options || []).map((o, i) => { const dist = distribution.find((x) => String(x.id) === String(o.id)); const pct = total ? Math.round((Number(dist?.chosen || 0) / total) * 100) : 0; const correct = String(reveal?.correctOptionId) === String(o.id); const mine = String(selected) === String(o.id); return <button disabled={Boolean(reveal) || submitting || Boolean(previousAnswer) || isBeforeQuestion} key={o.id} onClick={() => submitAnswer(o.id)} className={`w-full min-w-0 rounded-xl border p-3 sm:p-4 text-left transition ${reveal ? correct ? "border-emerald-400 bg-emerald-50" : mine ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-slate-50" : mine ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"}`}><div className="flex min-w-0 items-start gap-2 sm:gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-xs">{String.fromCharCode(65 + i)}</span>      <span className="min-w-0 flex-1 break-words text-sm sm:text-base">{localizedValue(o, "option_text", language)}</span>{reveal && <span className={`shrink-0 text-xs ${correct ? "text-emerald-700" : "text-slate-500"}`}>{pct}%{correct ? " · Correct" : ""}</span>}</div>{reveal && <div className="mt-3 h-1 overflow-hidden rounded-full bg-white"><div className={`h-full ${correct ? "bg-emerald-500" : "bg-indigo-400"}`} style={{ width: `${pct}%` }}/></div>}</button>; })}</div>
       {reveal && <div className={`mt-5 rounded-xl border p-4 ${reveal.correct ? "border-emerald-200 bg-emerald-50 text-emerald-800" : expiredReveal ? "border-amber-200 bg-amber-50 text-amber-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium">{reveal.correct ? "Correct answer" : expiredReveal ? "Time expired — correct answer" : "Incorrect answer"}</span><span className="rounded-full bg-white/80 px-2.5 py-1 text-xs">{reveal.multiplier}× · {Number(reveal.rating) > 0 ? "+" : ""}{reveal.rating} rating</span></div><p className="mt-1 text-sm">The correct option is highlighted. The next question follows the shared event schedule.</p></div>}
     </div>
   </div></StudentLayout>;

@@ -15,6 +15,7 @@ import EmptyState from "../../components/common/EmptyState";
 import { useDebounce } from "../../hooks/useDebounce";
 import { difficultyColor } from "../../utils/helpers";
 import { useAuth } from "../../hooks/useAuth";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 
 function getShareUrl(quiz) {
   const apiBase = String(import.meta.env.VITE_API_BASE || "/api").trim().replace(/\/$/, "");
@@ -40,6 +41,9 @@ async function shareQuiz(quiz) {
   }
 }
 function QuizCard({ quiz, favorite, onFavorite }) {
+  const { language } = useLanguage();
+  const title = localizedValue(quiz, "title", language);
+  const description = localizedValue(quiz, "description", language);
   return (
     <div className="card relative hover:-translate-y-1 hover:shadow-lg transition-all duration-200">
       <div className="absolute right-4 top-4 z-10 flex gap-2">
@@ -64,7 +68,7 @@ function QuizCard({ quiz, favorite, onFavorite }) {
         <Link to={`/student/quizzes/${quiz.id}`}>
           <img
             src={quiz.thumbnail_url}
-            alt={quiz.title}
+            alt={title}
             className="w-full h-36 object-cover rounded-lg mb-4"
           />
         </Link>
@@ -72,7 +76,7 @@ function QuizCard({ quiz, favorite, onFavorite }) {
       <Link to={`/student/quizzes/${quiz.id}`}>
         <div className="flex items-start justify-between gap-2 mb-2 pr-20">
           <h3 className="font-semibold text-gray-900 text-sm leading-tight">
-            {quiz.title}
+            {title}
           </h3>
           <Badge className={difficultyColor(quiz.difficulty)}>
             {quiz.difficulty}
@@ -91,9 +95,9 @@ function QuizCard({ quiz, favorite, onFavorite }) {
         <div className="mt-3 inline-flex items-center rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
           👥 {quiz.attempt_count || 0} students attempted
         </div>
-        {quiz.description && (
+        {description && (
           <p className="text-xs text-gray-400 mt-2 line-clamp-2">
-            {quiz.description}
+            {description}
           </p>
         )}
       </Link>

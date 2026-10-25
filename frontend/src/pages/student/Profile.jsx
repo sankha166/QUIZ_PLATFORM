@@ -10,6 +10,8 @@ import { useAuth } from "../../hooks/useAuth";
 import StudentLayout from "../../components/student/StudentLayout";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Badge from "../../components/common/Badge";
+import LanguageSelect from "../../components/common/LanguageSelect";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 import { getErrorMessage } from "../../utils/helpers";
 import {
   FaUser,
@@ -84,6 +86,7 @@ function Password({ label, value, onChange }) {
 }
 export default function Profile() {
   const { user, login } = useAuth();
+  const { language, t } = useLanguage();
   const [profile, setProfile] = useState(null),
     [favorites, setFavorites] = useState([]),
     [loading, setLoading] = useState(true),
@@ -232,12 +235,21 @@ export default function Profile() {
                 }}
                 className={`shrink-0 border-b-2 px-4 py-4 text-sm font-semibold ${tab === id ? "border-brand-600 text-brand-600" : "border-transparent text-slate-500"}`}
               >
-                {icon} <span className="ml-2">{label}</span>
+                {icon} <span className="ml-2">{t(label)}</span>
               </button>
             ))}
           </div>
         </div>
         <Alert ok={!!message}>{message || error}</Alert>
+        <section className="card">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{t("Language preference")}</h2>
+              <p className="mt-1 text-sm text-slate-500">{t("Choose the language for your Quizora experience.")}</p>
+            </div>
+            <LanguageSelect />
+          </div>
+        </section>
         {tab === "profile" && (
           <div className="card">
             <h2 className="text-lg font-semibold">Account details</h2>
@@ -310,7 +322,7 @@ export default function Profile() {
                     key={q.id}
                     className="rounded-2xl border border-slate-200 p-4"
                   >
-                    <h3 className="font-semibold">{q.title}</h3>
+                    <h3 className="font-semibold">{localizedValue(q, "title", language)}</h3>
                     <p className="mt-1 text-xs text-slate-500">
                       {q.category_name || "General"} · {q.attempt_count || 0}{" "}
                       attempts

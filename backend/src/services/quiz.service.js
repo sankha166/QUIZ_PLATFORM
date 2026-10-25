@@ -55,7 +55,7 @@ const optionalTimestamp = (value, fieldName) => {
   return normalized;
 };
 
-const create = async ({ title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, negative_marking_percent, default_question_marks, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds }) => {
+const create = async ({ title, description, title_translations, description_translations, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, negative_marking_percent, default_question_marks, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds }) => {
   const live = Boolean(is_live_quiz);
   const catId = category_id ? parseInt(category_id, 10) : null;
   if (live && !live_start_at) { const e = new Error('Live quiz requires a start time'); e.status = 400; throw e; }
@@ -69,7 +69,7 @@ const create = async ({ title, description, category_id, difficulty, duration, p
   }
   const negative = Math.min(100, Math.max(0, scoreValue(negative_marking_percent, 0)));
   const defaultMarks = Math.max(0.01, scoreValue(default_question_marks, 1));
-  const result = await query(`INSERT INTO quizzes (title, description, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, negative_marking_percent, default_question_marks, status, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'draft',$11,$12,NULL,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`, [title, description || null, Number.isNaN(catId) ? null : catId, difficulty, safeDuration, passing_score || 60, max_attempts || 1, thumbnail_url || null, negative, defaultMarks, live, startAt, Boolean(live_all_domains), scoreValue(live_score_025, 2), scoreValue(live_score_050, 1.5), scoreValue(live_score_075, 1.25), scoreValue(live_score_100, 1), scoreValue(live_score_wrong, -0.5), live && Boolean(live_same_question_time), timeValue(live_question_time_seconds)]);
+  const result = await query(`INSERT INTO quizzes (title, description, title_translations, description_translations, category_id, difficulty, duration, passing_score, max_attempts, thumbnail_url, negative_marking_percent, default_question_marks, status, is_live_quiz, live_start_at, live_end_at, live_all_domains, live_score_025, live_score_050, live_score_075, live_score_100, live_score_wrong, live_same_question_time, live_question_time_seconds) VALUES ($1,$2,$3::jsonb,$4::jsonb,$5,$6,$7,$8,$9,$10,$11,$12,'draft',$13,$14,NULL,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`, [title, description || null, JSON.stringify(title_translations || {}), JSON.stringify(description_translations || {}), Number.isNaN(catId) ? null : catId, difficulty, safeDuration, passing_score || 60, max_attempts || 1, thumbnail_url || null, negative, defaultMarks, live, startAt, Boolean(live_all_domains), scoreValue(live_score_025, 2), scoreValue(live_score_050, 1.5), scoreValue(live_score_075, 1.25), scoreValue(live_score_100, 1), scoreValue(live_score_wrong, -0.5), live && Boolean(live_same_question_time), timeValue(live_question_time_seconds)]);
   return result.rows[0];
 };
 
@@ -77,7 +77,7 @@ const update = async (id, fields) => {
   const current = await query('SELECT is_live_quiz FROM quizzes WHERE id = $1', [id]);
   if (!current.rows.length) { const e = new Error('Quiz not found'); e.status = 404; throw e; }
   const willBeLive = Boolean(current.rows[0].is_live_quiz || fields.is_live_quiz === true);
-  const allowed = ['title','description','category_id','difficulty','duration','passing_score','max_attempts','thumbnail_url','negative_marking_percent','default_question_marks','is_live_quiz','live_start_at','live_end_at','live_all_domains','live_score_025','live_score_050','live_score_075','live_score_100','live_score_wrong','live_same_question_time','live_question_time_seconds'];
+  const allowed = ['title','description','title_translations','description_translations','category_id','difficulty','duration','passing_score','max_attempts','thumbnail_url','negative_marking_percent','default_question_marks','is_live_quiz','live_start_at','live_end_at','live_all_domains','live_score_025','live_score_050','live_score_075','live_score_100','live_score_wrong','live_same_question_time','live_question_time_seconds'];
   const updates = [], params = [];
   let idx = 1;
   for (const key of allowed) {
@@ -92,7 +92,8 @@ const update = async (id, fields) => {
     if (key === 'live_question_time_seconds') val = timeValue(val);
     if (key === 'live_start_at') val = optionalTimestamp(val, 'Live start time');
     if (key === 'live_end_at') val = optionalTimestamp(val, 'Live end time');
-    updates.push(`${key} = $${idx}`);
+    if (key === 'title_translations' || key === 'description_translations') val = JSON.stringify(val || {});
+    updates.push(`${key} = $${idx}${key === 'title_translations' || key === 'description_translations' ? '::jsonb' : ''}`);
     params.push(val);
     idx++;
   }

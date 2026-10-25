@@ -11,8 +11,10 @@ import {
   formatTime,
   statusColor,
 } from "../../utils/helpers";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 
 export default function AttemptHistory() {
+  const { language, t } = useLanguage();
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -39,29 +41,29 @@ export default function AttemptHistory() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              My Attempt History
+              {t("My Attempt History")}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Review your performance and track your progress.
+              {t("Review your performance and track your progress.")}
             </p>
           </div>
           <Link
             to="/student/quizzes"
             className="btn-primary w-full sm:w-auto text-center"
           >
-            Browse new quizzes
+            {t("Browse new quizzes")}
           </Link>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="rounded-2xl border bg-white p-4 sm:p-5 shadow-sm">
             <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-400">
-              Total attempts
+              {t("Total attempts")}
             </p>
             <p className="mt-2 text-2xl sm:text-3xl font-bold">{stats.total}</p>
           </div>
           <div className="rounded-2xl border bg-emerald-50/50 p-4 sm:p-5 shadow-sm">
             <p className="text-[10px] sm:text-xs uppercase tracking-wider text-emerald-600">
-              Passed
+              {t("Passed")}
             </p>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-emerald-600">
               {stats.passed}
@@ -69,7 +71,7 @@ export default function AttemptHistory() {
           </div>
           <div className="rounded-2xl border bg-rose-50/50 p-4 sm:p-5 shadow-sm">
             <p className="text-[10px] sm:text-xs uppercase tracking-wider text-rose-600">
-              Failed
+              {t("Failed")}
             </p>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-rose-600">
               {stats.failed}
@@ -77,7 +79,7 @@ export default function AttemptHistory() {
           </div>
           <div className="rounded-2xl border bg-indigo-50/50 p-4 sm:p-5 shadow-sm">
             <p className="text-[10px] sm:text-xs uppercase tracking-wider text-indigo-600">
-              Avg score
+              {t("Avg score")}
             </p>
             <p className="mt-2 text-2xl sm:text-3xl font-bold text-indigo-700">
               {stats.avg}%
@@ -89,11 +91,11 @@ export default function AttemptHistory() {
         ) : attempts.length === 0 ? (
           <EmptyState
             icon="📋"
-            title="No attempts yet"
-            message="Take a quiz to see your history here."
+            title={t("No attempts yet")}
+            message={t("Take a quiz to see your history here.")}
             action={
               <Link to="/student/quizzes" className="btn-primary">
-                Browse Quizzes
+                {t("Browse Quizzes")}
               </Link>
             }
           />
@@ -117,7 +119,7 @@ export default function AttemptHistory() {
                           key={h}
                           className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider"
                         >
-                          {h}
+                          {t(h)}
                         </th>
                       ))}
                     </tr>
@@ -126,8 +128,8 @@ export default function AttemptHistory() {
                     {attempts.map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50">
                         <td className="px-4 py-4 font-medium text-slate-900">
-                          <div>{a.quiz_title}</div>
-                          {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">SHORT QUIZ</span>}
+                          <div>{localizedValue({ title: a.quiz_title, title_translations: a.title_translations }, "title", language)}</div>
+                          {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">{t("Short quiz")}</span>}
                         </td>
                         <td className="px-4 py-4 text-slate-500">
                           {a.category_name || "—"}
@@ -151,7 +153,7 @@ export default function AttemptHistory() {
                             to={`/student/results/${a.id}`}
                             className="rounded-full bg-brand-500 px-4 py-2 text-xs font-semibold text-white"
                           >
-                            Review
+                            {t("Review")}
                           </Link>
                         </td>
                       </tr>
@@ -169,9 +171,9 @@ export default function AttemptHistory() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="font-semibold text-slate-900 truncate">
-                        {a.quiz_title}
+                        {localizedValue({ title: a.quiz_title, title_translations: a.title_translations }, "title", language)}
                       </h3>
-                      {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">SHORT QUIZ</span>}
+                      {a.mode === "short" && <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">{t("Short quiz")}</span>}
                       <p className="text-xs text-slate-500 mt-1">
                         {a.category_name || "General"} ·{" "}
                         {formatDate(a.completed_at)}
@@ -181,18 +183,18 @@ export default function AttemptHistory() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 mt-4 text-center">
                     <div className="rounded-xl bg-slate-50 p-2">
-                      <p className="text-[10px] text-slate-400">Score</p>
+                      <p className="text-[10px] text-slate-400">{t("Score")}</p>
                       <p className="font-bold">{Number(a.score || 0).toFixed(2)} / {Number(a.total_marks || 0).toFixed(2)}</p>
                       <p className="text-[10px] text-slate-500">{formatPercent(a.percentage)}</p>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-2">
-                      <p className="text-[10px] text-slate-400">Time</p>
+                      <p className="text-[10px] text-slate-400">{t("Time")}</p>
                       <p className="font-bold text-xs sm:text-sm">
                         {formatTime(a.time_taken)}
                       </p>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-2">
-                      <p className="text-[10px] text-slate-400">Pass mark</p>
+                      <p className="text-[10px] text-slate-400">{t("Passing score")}</p>
                       <p className="font-bold">{a.passing_score}%</p>
                     </div>
                   </div>
@@ -200,7 +202,7 @@ export default function AttemptHistory() {
                     to={`/student/results/${a.id}`}
                     className="mt-3 block w-full rounded-xl bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white"
                   >
-                    Review Result
+                    {t("Review Result")}
                   </Link>
                 </div>
               ))}

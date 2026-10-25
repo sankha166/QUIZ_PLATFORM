@@ -6,10 +6,12 @@ import StudentLayout from '../../components/student/StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
 import { difficultyColor, getErrorMessage } from '../../utils/helpers';
+import { localizedValue, useLanguage } from '../../context/LanguageContext';
 
 export default function QuizDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [quiz, setQuiz] = useState(null);
   const [attemptsLeft, setAttemptsLeft] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -73,27 +75,27 @@ export default function QuizDetails() {
           <div className="p-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-slate-900">{quiz.title}</h1>
-                <p className="mt-2 text-sm text-slate-500">{quiz.description || 'No description available for this quiz.'}</p>
+                <h1 className="text-3xl font-bold text-slate-900">{localizedValue(quiz, 'title', language)}</h1>
+                <p className="mt-2 text-sm text-slate-500">{localizedValue(quiz, 'description', language) || 'No description available for this quiz.'}</p>
               </div>
               <Badge className={difficultyColor(quiz.difficulty)}>{quiz.difficulty}</Badge>
             </div>
 
             <div className="grid gap-4 mt-8 sm:grid-cols-2">
               <div className="rounded-3xl bg-slate-50 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Category</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('Category')}</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.category_name || 'Uncategorized'}</p>
               </div>
               <div className="rounded-3xl bg-slate-50 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Duration</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('Duration')}</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.duration} min</p>
               </div>
               <div className="rounded-3xl bg-slate-50 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Questions</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('Questions')}</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.question_count}</p>
               </div>
               <div className="rounded-3xl bg-slate-50 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Passing score</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('Passing score')}</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{quiz.passing_score}%</p>
               </div>
               <div className="rounded-3xl bg-slate-50 p-5">

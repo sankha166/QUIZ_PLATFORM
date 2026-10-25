@@ -159,7 +159,7 @@ const submit = async (qid, uid, { attemptId, answers }) => {
 const getMyAttempts = async (uid) => {
   const domainId = await preferred(uid);
   const result = await query(
-    `SELECT a.*,q.title quiz_title,q.duration,q.passing_score,q.negative_marking_percent,q.is_live_quiz,
+    `SELECT a.*,q.title quiz_title,q.title_translations,q.description_translations,q.duration,q.passing_score,q.negative_marking_percent,q.is_live_quiz,
             (SELECT COALESCE(SUM(marks),0) FROM questions tq WHERE tq.quiz_id=q.id) total_marks,
             c.name category_name,c.domain_id,dm.name domain_name
      FROM attempts a
@@ -177,7 +177,7 @@ const getMyAttempts = async (uid) => {
 
 const getAttemptById = async (aid, uid) => {
   const attemptResult = await query(
-    `SELECT a.*,q.title quiz_title,q.passing_score,q.negative_marking_percent,q.duration,q.is_live_quiz,
+    `SELECT a.*,q.title_translations,q.description_translations,q.title quiz_title,q.passing_score,q.negative_marking_percent,q.duration,q.is_live_quiz,
             (SELECT COALESCE(SUM(marks),0) FROM questions tq WHERE tq.quiz_id=q.id) total_marks,
             c.name category_name,c.domain_id,dm.name domain_name
      FROM attempts a
@@ -196,11 +196,11 @@ const getAttemptById = async (aid, uid) => {
   const attempt = attemptResult.rows[0];
   const answerResult = await query(
     `SELECT q.id question_id,ans.id answer_id,ans.selected_option_id,ans.is_correct,
-            COALESCE(ans.time_taken,0) time_taken,COALESCE(ans.marks_awarded,0) marks_awarded,q.question_text,q.explanation,q.question_image_url,q.explanation_image_url,q.marks,
-            sel.option_text selected_option_text,
+            COALESCE(ans.time_taken,0) time_taken,COALESCE(ans.marks_awarded,0) marks_awarded,q.question_text,q.question_text_translations,q.explanation,q.explanation_translations,q.question_image_url,q.explanation_image_url,q.marks,
+            sel.option_text selected_option_text,sel.option_text_translations selected_option_text_translations,
             COALESCE((
               SELECT json_agg(
-                json_build_object('id',o.id,'option_text',o.option_text,'image_url',o.image_url,'is_correct',o.is_correct)
+                json_build_object('id',o.id,'option_text',o.option_text,'option_text_translations',o.option_text_translations,'image_url',o.image_url,'is_correct',o.is_correct)
                 ORDER BY o.id
               )
               FROM options o WHERE o.question_id=q.id

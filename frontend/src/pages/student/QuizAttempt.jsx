@@ -6,6 +6,7 @@ import { useTimer } from "../../hooks/useTimer";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 function formatQuestionTime(seconds) {
   return seconds < 60
     ? `${seconds}s`
@@ -15,6 +16,7 @@ export default function QuizAttempt() {
   const { id } = useParams(),
     location = useLocation(),
     navigate = useNavigate();
+  const { language } = useLanguage();
   const [attemptData, setAttemptData] = useState(
       location.state?.attemptData || null,
     ),
@@ -289,7 +291,7 @@ export default function QuizAttempt() {
               Secure Assessment
             </p>
             <h1 className="font-bold text-slate-900 truncate text-sm">
-              {attemptData.quiz?.title}
+              {localizedValue(attemptData.quiz, "title", language)}
             </h1>
             <p className="text-[11px] text-slate-500">
               Q {current + 1}/{questions.length}
@@ -357,7 +359,7 @@ export default function QuizAttempt() {
                 />
               </div>
               <p className="text-base sm:text-xl font-semibold leading-8 text-slate-900 break-words">
-                {question?.question_text}
+                {localizedValue(question, "question_text", language)}
               </p>
               {question?.question_image_url && (
                 <img src={question.question_image_url} alt="Question diagram" className="mt-5 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
@@ -391,7 +393,7 @@ export default function QuizAttempt() {
                       className="sr-only"
                     />
                     <span className="min-w-0 break-words text-sm sm:text-base text-slate-800 leading-6">
-                      <span className="break-words">{opt.option_text}</span>
+                      <span className="break-words">{localizedValue(opt, "option_text", language)}</span>
                       {opt.image_url && <img src={opt.image_url} alt="" className="mt-2 max-h-24 max-w-full rounded-lg object-contain" />}
                       {shortFeedback && (() => {
                         const stat = shortFeedback.options?.find((entry) => String(entry.option_id) === String(opt.id));
