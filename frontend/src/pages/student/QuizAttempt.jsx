@@ -16,7 +16,7 @@ export default function QuizAttempt() {
   const { id } = useParams(),
     location = useLocation(),
     navigate = useNavigate();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [attemptData, setAttemptData] = useState(
       location.state?.attemptData || null,
     ),
@@ -48,7 +48,7 @@ export default function QuizAttempt() {
       startQuiz(id)
         .then((r) => setAttemptData(r.data))
         .catch((e) =>
-          setSubmitError(e?.response?.data?.message || "Unable to start quiz."),
+          setSubmitError(e?.response?.data?.message || t("Unable to start quiz.")),
         )
         .finally(() => setLoading(false));
     }
@@ -153,7 +153,7 @@ export default function QuizAttempt() {
         setAutoSubmitting(false);
         setSubmitError(
           err?.response?.data?.message ||
-            "Submission failed. Please try again.",
+            t("Submission failed. Please try again."),
         );
       }
     },
@@ -171,18 +171,18 @@ export default function QuizAttempt() {
     );
   if (autoSubmitting)
     return (
-      <LoadingScreen message="Time's up! Submitting your answers..." />
+      <LoadingScreen message={t("Time's up! Submitting your answers...")} />
     );
   if (!questions.length)
     return (
       <div className="min-h-screen grid place-items-center p-6 text-center">
         <div>
-          <p className="font-semibold">No questions available.</p>
+          <p className="font-semibold">{t("No questions available.")}</p>
           <button
             className="btn-secondary mt-4"
             onClick={() => navigate("/student/quizzes")}
           >
-            Back
+            {t("Back")}
           </button>
         </div>
       </div>
@@ -229,7 +229,7 @@ export default function QuizAttempt() {
         else handleSubmit(true);
       }, 4000);
     } catch (error) {
-      setSubmitError(error?.response?.data?.message || "Unable to load question feedback.");
+      setSubmitError(error?.response?.data?.message || t("Unable to load question feedback."));
     } finally {
       feedbackInFlight.current = false;
     }
@@ -288,7 +288,7 @@ export default function QuizAttempt() {
         <div className="mx-auto flex min-h-12 max-w-6xl flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[9px] uppercase tracking-[.18em] text-indigo-500 font-semibold">
-              Secure Assessment
+              {t("Secure Assessment")}
             </p>
             <h1 className="font-bold text-slate-900 truncate text-sm">
               {localizedValue(attemptData.quiz, "title", language)}
@@ -298,7 +298,7 @@ export default function QuizAttempt() {
             </p>
           </div>
           <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
-          {attemptData.mode === "short" && <><span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">⚡ Short</span><span className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${scoreFlash ? scoreFlashType === "positive" ? "bg-emerald-500 text-white ring-4 ring-emerald-200 scale-105" : scoreFlashType === "negative" ? "bg-rose-500 text-white ring-4 ring-rose-200 scale-105" : "bg-slate-500 text-white ring-4 ring-slate-200 scale-105" : "bg-indigo-50 text-indigo-700"}`}>Score: {shortScore.toFixed(2)} {scoreFlash && (scoreFlashType === "positive" ? "↑" : scoreFlashType === "negative" ? "↓" : "•")}</span><span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">Total: {formatQuestionTime(shortElapsed)}</span></>}
+          {attemptData.mode === "short" && <><span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">⚡ {t("Short quiz")}</span><span className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${scoreFlash ? scoreFlashType === "positive" ? "bg-emerald-500 text-white ring-4 ring-emerald-200 scale-105" : scoreFlashType === "negative" ? "bg-rose-500 text-white ring-4 ring-rose-200 scale-105" : "bg-slate-500 text-white ring-4 ring-slate-200 scale-105" : "bg-indigo-50 text-indigo-700"}`}>{t("Score")}: {shortScore.toFixed(2)} {scoreFlash && (scoreFlashType === "positive" ? "↑" : scoreFlashType === "negative" ? "↓" : "•")}</span><span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">{t("Total")}: {formatQuestionTime(shortElapsed)}</span></>}
           {attemptData.mode !== "short" && <div
             className={`shrink-0 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-bold ${secondsLeft !== null && secondsLeft < 60 ? "bg-red-100 text-red-600" : "bg-indigo-50 text-indigo-700"}`}
           >
@@ -310,17 +310,16 @@ export default function QuizAttempt() {
       </header>
       <div className="mx-auto max-w-6xl px-3 pb-28 pt-24 sm:px-5 sm:pb-6 sm:pt-24">
         <div className="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-xs sm:text-sm text-indigo-800">
-          🔒 <strong>Fair assessment mode:</strong> copying, selection, context
-          menus and common save/print shortcuts are disabled during this quiz.
+          🔒 <strong>{t("Fair assessment mode")}:</strong> {t("copying, selection, context menus and common save/print shortcuts are disabled during this quiz.")}
         </div>
         {submitError && (
           <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            <b>Submission issue:</b> {submitError}
+            <b>{t("Submission issue")}:</b> {submitError}
             <button
               className="ml-3 font-bold underline"
               onClick={() => handleSubmit(false)}
             >
-              Retry
+              {t("Retry")}
             </button>
           </div>
         )}
@@ -329,15 +328,15 @@ export default function QuizAttempt() {
             <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
               <div className="flex items-center justify-between gap-3 mb-5">
                 <span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                  Question {current + 1}
+                  {t("Question")} {current + 1}
                 </span>
                 {attemptData.mode === "long" && (
                   <button type="button" onClick={toggleMarked} className={`rounded-full px-3 py-1 text-xs font-bold ${markedQuestions[question.id] ? "bg-amber-200 text-amber-900" : "bg-slate-100 text-slate-500"}`}>
-                    {markedQuestions[question.id] ? "★ Marked for review" : "☆ Mark for review"}
+                    {markedQuestions[question.id] ? `★ ${t("Marked for review")}` : `☆ ${t("Mark for review")}`}
                   </button>
                 )}
                 <span className="text-xs text-slate-400">
-                  Time:{" "}
+                  {t("Time")}:{" "}
                   {formatQuestionTime(
                     questionTimes[current] ||
                       Math.max(
@@ -362,7 +361,7 @@ export default function QuizAttempt() {
                 {localizedValue(question, "question_text", language)}
               </p>
               {question?.question_image_url && (
-                <img src={question.question_image_url} alt="Question diagram" className="mt-5 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
+                <img src={question.question_image_url} alt={t("Question diagram")} className="mt-5 max-h-80 w-full rounded-2xl border border-slate-200 object-contain" />
               )}
               <div className="mt-5 space-y-2 sm:mt-7 sm:space-y-3">
                 {question?.options?.map((opt, index) => (
@@ -408,7 +407,7 @@ export default function QuizAttempt() {
                   </label>
                 ))}
               </div>
-              {attemptData.mode === "short" && shortFeedback && <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${shortFeedback.isCorrect ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}><div className="flex flex-wrap items-center gap-2"><strong>{shortFeedback.isCorrect ? "Correct answer" : shortFeedback.selected ? "Incorrect answer" : "Time expired — not attempted"}</strong><span className="text-xs font-semibold">Question result</span></div><div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold"><span>Obtained: <strong>{shortFeedback.marksAwarded >= 0 ? "+" : ""}{shortFeedback.marksAwarded.toFixed(2)} marks</strong></span><span>Time taken: <strong>{formatQuestionTime(shortFeedback.timeTaken)}</strong></span><span>{shortFeedback.withinTime ? "Answered within time" : "No marks — time expired"}</span></div></div>}
+              {attemptData.mode === "short" && shortFeedback && <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${shortFeedback.isCorrect ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}><div className="flex flex-wrap items-center gap-2"><strong>{shortFeedback.isCorrect ? t("Correct answer") : shortFeedback.selected ? t("Incorrect answer") : t("Time expired — not attempted")}</strong><span className="text-xs font-semibold">{t("Question result")}</span></div><div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold"><span>{t("Obtained")}: <strong>{shortFeedback.marksAwarded >= 0 ? "+" : ""}{shortFeedback.marksAwarded.toFixed(2)} {t("marks")}</strong></span><span>{t("Time taken")}: <strong>{formatQuestionTime(shortFeedback.timeTaken)}</strong></span><span>{shortFeedback.withinTime ? t("Answered within time") : t("No marks — time expired")}</span></div></div>}
               <div className="fixed inset-x-3 bottom-3 z-30 flex flex-col-reverse gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur sm:static sm:flex-row sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:pt-7 sm:shadow-none sm:backdrop-blur-none">
                 {attemptData.mode === "long" && <button
                   type="button"
@@ -425,7 +424,7 @@ export default function QuizAttempt() {
                     disabled={submitting || Boolean(shortFeedback)}
                     className="btn-primary w-full sm:w-auto"
                   >
-                    {answers[question.id] ? "Show answer & continue →" : "Continue →"}
+                    {answers[question.id] ? `${t("Show answer & continue")} →` : `${t("Continue")} →`}
                   </button>
                 ) : current < questions.length - 1 ? (
                   <button
@@ -443,7 +442,7 @@ export default function QuizAttempt() {
                     onClick={() => setShowConfirm(true)}
                     className="btn-success w-full sm:w-auto"
                   >
-                    {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />Submitting…</span> : "Submit Quiz"}
+                    {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />{t("Submitting")}…</span> : t("Submit Quiz")}
                   </button>
                 ) : null}
               </div>
@@ -484,7 +483,7 @@ export default function QuizAttempt() {
                 disabled={submitting}
                 className="btn-success w-full mt-5"
               >
-                {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />Submitting…</span> : "Submit Quiz"}
+                {submitting ? <span className="inline-flex items-center gap-2"><LoadingSpinner size="sm" />{t("Submitting")}…</span> : t("Submit Quiz")}
               </button>
             </div>
           </aside>
@@ -492,7 +491,7 @@ export default function QuizAttempt() {
       </div>
       <ConfirmModal
         isOpen={showConfirm}
-        title="Submit Quiz?"
+        title={t("Submit Quiz?")}
         message={
           unanswered > 0
             ? `You have ${unanswered} unanswered question(s). Are you sure you want to submit?`
@@ -503,7 +502,7 @@ export default function QuizAttempt() {
           handleSubmit(false);
         }}
         onCancel={() => setShowConfirm(false)}
-        confirmText="Submit"
+        confirmText={t("Submit")}
         danger={false}
       />
     </div>

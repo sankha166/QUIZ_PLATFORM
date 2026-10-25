@@ -252,11 +252,11 @@ export default function Profile() {
         </section>
         {tab === "profile" && (
           <div className="card">
-            <h2 className="text-lg font-semibold">Account details</h2>
+            <h2 className="text-lg font-semibold">{t("Account details")}</h2>
             <form onSubmit={save} className="mt-5 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label">Display name</label>
+                  <label className="label">{t("Display name")}</label>
                   <input
                     className="input"
                     maxLength={100}
@@ -267,7 +267,7 @@ export default function Profile() {
                   />
                 </div>
                 <div>
-                  <label className="label">Email</label>
+                  <label className="label">{t("Email")}</label>
                   <input
                     className="input bg-slate-50"
                     value={profile?.email || ""}
@@ -276,7 +276,7 @@ export default function Profile() {
                 </div>
               </div>
               <div>
-                <label className="label">Bio</label>
+                <label className="label">{t("Bio")}</label>
                 <textarea
                   className="input h-28"
                   maxLength={500}
@@ -287,7 +287,7 @@ export default function Profile() {
                 />
               </div>
               <button disabled={saving} className="btn-primary">
-                {saving ? "Saving…" : "Save changes"}
+                {saving ? `${t("Saving")}…` : t("Save changes")}
               </button>
             </form>
           </div>
@@ -296,7 +296,7 @@ export default function Profile() {
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Favorite quizzes</h2>
+                <h2 className="text-lg font-semibold">{t("Favorite quizzes")}</h2>
                 <p className="text-sm text-slate-500 mt-1">
                   Your saved quizzes in one place.
                 </p>
@@ -353,7 +353,7 @@ export default function Profile() {
         {tab === "avatar" && (
           <div className="space-y-5">
             <div className="card">
-              <h2 className="text-lg font-semibold">Choose an avatar</h2>
+              <h2 className="text-lg font-semibold">{t("Choose an avatar")}</h2>
               <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5">
                 {AVATARS.map((url) => (
                   <button
@@ -372,7 +372,7 @@ export default function Profile() {
               </div>
             </div>
             <div className="card">
-              <h2 className="text-lg font-semibold">Upload from device</h2>
+              <h2 className="text-lg font-semibold">{t("Upload from device")}</h2>
               <p className="mt-1 text-sm text-slate-500">
                 PNG/JPG/WebP up to 2 MB.
               </p>
@@ -396,7 +396,7 @@ export default function Profile() {
                   disabled={saving}
                   className="btn-primary"
                 >
-                  {saving ? "Saving…" : "Save avatar"}
+                  {saving ? `${t("Saving")}…` : t("Save avatar")}
                 </button>
               </div>
             </div>
@@ -404,25 +404,25 @@ export default function Profile() {
         )}
         {tab === "security" && (
           <div className="card">
-            <h2 className="text-lg font-semibold">Change password</h2>
+            <h2 className="text-lg font-semibold">{t("Change password")}</h2>
             <form onSubmit={changePw} className="mt-5 max-w-md space-y-4">
               <Password
-                label="Current password"
+                label={t("Current password")}
                 value={pw.currentPassword}
                 onChange={(v) => setPw((p) => ({ ...p, currentPassword: v }))}
               />
               <Password
-                label="New password"
+                label={t("New password")}
                 value={pw.newPassword}
                 onChange={(v) => setPw((p) => ({ ...p, newPassword: v }))}
               />
               <Password
-                label="Confirm password"
+                label={t("Confirm password")}
                 value={pw.confirmPassword}
                 onChange={(v) => setPw((p) => ({ ...p, confirmPassword: v }))}
               />
               <button disabled={saving} className="btn-primary w-full">
-                {saving ? "Updating…" : "Update password"}
+                {saving ? `${t("Updating")}…` : t("Update password")}
               </button>
             </form>
           </div>
