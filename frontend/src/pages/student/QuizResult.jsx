@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { getAttemptById } from "../../api/attempt.api";
 import { getQuizReview, submitQuizReview, submitQuestionReport } from "../../api/reviews.api";
 import StudentLayout from "../../components/student/StudentLayout";
@@ -33,8 +33,18 @@ const moods = [
 ];
 export default function QuizResult() {
   const { language, t } = useLanguage();
+  const location = useLocation();
   const { attemptId } = useParams(),
-    [attempt, setAttempt] = useState(null),
+    [attempt, setAttempt] = useState(() => {
+      const result = location.state?.result;
+      return result ? {
+        ...result,
+        id: result.attemptId,
+        status: result.status || "failed",
+        answers: [],
+        analysis: { comparison: {}, topper: null, questionStats: [] },
+      } : null;
+    }),
     [loading, setLoading] = useState(true),
     [reviewOpen, setReviewOpen] = useState(false),
     [mood, setMood] = useState(""),
@@ -204,6 +214,12 @@ export default function QuizResult() {
   return (
     <StudentLayout>
       <div className="relative max-w-5xl mx-auto space-y-6 min-w-0">
+        {error && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {error} The submitted score is shown below. Refresh this page to
+            load the full question review.
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3">
           <Link to="/student/attempts" className="btn-secondary">
             ← Back

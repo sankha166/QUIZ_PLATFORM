@@ -43,6 +43,15 @@ npm install
 npm run dev       # Starts on http://localhost:5173
 ```
 
+## APK Install on your device
+```bash
+cd frontend
+npm run build
+npx cap sync android
+cd android
+.\gradlew.bat assembleDebug
+```
+
 ---
 
 ## Environment Variables (backend/.env)

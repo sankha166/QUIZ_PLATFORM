@@ -236,7 +236,12 @@ export default function QuizAttempt() {
   };
   const selectAnswer = (optionId) => {
     if (attemptData.mode === "short" && shortFeedback) return;
-    const nextAnswers = { ...answersRef.current, [question.id]: optionId };
+    const nextAnswers = { ...answersRef.current };
+    if (String(nextAnswers[question.id]) === String(optionId)) {
+      delete nextAnswers[question.id];
+    } else {
+      nextAnswers[question.id] = optionId;
+    }
     answersRef.current = nextAnswers;
     setAnswers(nextAnswers);
     if (attemptData.mode === "short") revealShortFeedback(optionId);
