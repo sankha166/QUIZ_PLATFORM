@@ -418,6 +418,14 @@ function AiImportModal({ quizId, isLive, defaultMarks, onImported, onClose }) {
                       {q.options.map((o, j) => (
                         <div
                           key={j}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setPreview((current) => current.map((item, index) => index === i
+                            ? { ...item, options: item.options.map((option, optionIndex) => ({ ...option, is_correct: optionIndex === j })) }
+                            : item))}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") event.currentTarget.click();
+                          }}
                           className={`rounded-xl border p-3 text-sm ${o.is_correct ? "border-emerald-300 bg-emerald-50" : ""}`}
                         >
                           <b>{String.fromCharCode(65 + j)}.</b>{" "}
@@ -431,6 +439,9 @@ function AiImportModal({ quizId, isLive, defaultMarks, onImported, onClose }) {
                       ))}
                     </div>
                   )}
+                  <p className="mt-2 text-xs text-slate-500">
+                    Click an option to mark it as the verified correct answer.
+                  </p>
                   {q.explanation && (
                     <p className="mt-2 text-sm text-slate-500">
                       {q.explanation}

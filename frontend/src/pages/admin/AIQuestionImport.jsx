@@ -151,6 +151,14 @@ export default function AIQuestionImport() {
                   {q.options.map((o, j) => (
                     <div
                       key={j}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setQuestions((current) => current.map((item, index) => index === i
+                        ? { ...item, options: item.options.map((option, optionIndex) => ({ ...option, is_correct: optionIndex === j })) }
+                        : item))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") event.currentTarget.click();
+                      }}
                       className={`rounded-xl border p-3 text-sm ${o.is_correct ? "border-green-300 bg-green-50" : ""}`}
                     >
                       <span className="font-semibold mr-2">
@@ -165,6 +173,9 @@ export default function AIQuestionImport() {
                     </div>
                   ))}
                 </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Click an option to mark it as the verified correct answer.
+                </p>
                 {q.explanation && (
                   <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
                     <b>Explanation:</b> {q.explanation}

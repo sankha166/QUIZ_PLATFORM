@@ -1,7 +1,7 @@
 const { PDFParse } = require('pdf-parse');
 const mammoth = require('mammoth');
 
-const MAX_CHUNK_LENGTH = 18000;
+const MAX_CHUNK_LENGTH = 10000;
 
 async function extractText({ text, file }) {
   if (text && text.trim()) return normalizeText(text);
@@ -66,11 +66,13 @@ function truthyAnswer(value) {
 function answerIndex(value, optionCount) {
   const text = String(value || '').trim().toUpperCase();
   if (!text) return -1;
-  if (/^[A-Z]$/.test(text)) {
-    const index = text.charCodeAt(0) - 65;
+  const letter = text.match(/\b(?:OPTION|ANSWER)?\s*([A-Z])\b/);
+  if (letter) {
+    const index = letter[1].charCodeAt(0) - 65;
     return index >= 0 && index < optionCount ? index : -1;
   }
-  const number = Number(text.replace(/^(OPTION|ANSWER)\s*/i, ''));
+  const numberMatch = text.match(/\b(?:OPTION|ANSWER)?\s*(\d+)\b/);
+  const number = Number(numberMatch?.[1]);
   return Number.isInteger(number) && number >= 1 && number <= optionCount ? number - 1 : -1;
 }
 
@@ -88,11 +90,14 @@ function normalizeQuestions(parsed) {
       explanation_image_url: String(q.explanation_image_url || q.explanationImageUrl || '').trim(),
       answer: q.correct_answer ?? q.answer ?? q.correctAnswer ?? '',
       options: q.options
-        .map((o) => ({
-          option_text: String(o.option_text || o.text || o.option || '').trim(),
-          image_url: String(o.image_url || o.imageUrl || '').trim(),
-          is_correct: truthyAnswer(o.is_correct ?? o.correct ?? o.isCorrect),
-        }))
+        .map((o) => {
+          const option = typeof o === 'string' ? { option_text: o } : (o || {});
+          return {
+          option_text: String(option.option_text || option.text || option.option || '').trim(),
+          image_url: String(option.image_url || option.imageUrl || '').trim(),
+          is_correct: truthyAnswer(option.is_correct ?? option.correct ?? option.isCorrect),
+          };
+        })
         .filter((o) => o.option_text),
     }))
     .filter((q) => q.options.length >= 2)
@@ -110,7 +115,7 @@ function normalizeQuestions(parsed) {
     });
 }
 
-async function extractChunk({ source, sharedAnswerKey, key, model, chunkNumber, totalChunks }) {
+async function extractChunk({ source, sharedAnswerKey, key, model, chunkNumber, totalChunks, file }) {
   const prompt = `Extract every multiple-choice question from chunk ${chunkNumber} of ${totalChunks} of the supplied educational/PYQ document.
 Return ONLY valid JSON in this exact shape:
 {"questions":[{"question_text":"...","marks":1,"difficulty":"easy|medium|hard","correct_answer":"B","question_image_url":"","explanation_image_url":"","options":[{"option_text":"...","is_correct":false}],"explanation":"..."}]}
@@ -120,6 +125,7 @@ Rules:
 - Include exactly the options visibly present in the source; do not invent options.
 - A question is valid when it has at least two options. Keep four options when four are present.
 - Determine the correct answer only from an explicit answer key, answer label, or explanation in the supplied content. Never guess.
+- If a PDF is attached, inspect its visual formatting as well as its extracted text. A green-highlighted, green-filled, or otherwise visibly marked option is an authoritative correct answer when it is clearly associated with that question.
 - Return the answer label in correct_answer (for example A, B, C, or D) as well as marking that option is_correct=true. If the source has no authoritative answer, leave correct_answer empty and mark all options false.
 - If no authoritative answer is present, keep the question and set every is_correct value to false so an administrator can verify it before saving.
 - An explanation is REQUIRED for every question. If the source includes an explanation, preserve its meaning. Otherwise, write a concise, self-contained explanation (one to three sentences) that explains why the explicitly correct option is correct and, when useful, why the other options are not. Base it only on the question, its options, and the authoritative answer; never invent facts.
@@ -141,11 +147,27 @@ ${source}`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        contents: [{
+          role: 'user',
+          parts: [
+            ...(file?.buffer && (
+              (file.mimetype || '').toLowerCase().includes('pdf') ||
+              /\.pdf$/i.test(file.originalname || '')
+            )
+              ? [{
+                  inline_data: {
+                    mime_type: 'application/pdf',
+                    data: file.buffer.toString('base64'),
+                  },
+                }]
+              : []),
+            { text: prompt },
+          ],
+        }],
         generationConfig: {
           temperature: 0.1,
           responseMimeType: 'application/json',
-          maxOutputTokens: 16384,
+          maxOutputTokens: 32768,
         },
       }),
     });
@@ -180,12 +202,47 @@ function deduplicateQuestions(questions) {
   });
 }
 
+function parsePlainTextQuestions(source) {
+  const lines = String(source || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const questions = [];
+  let current = null;
+  let currentOption = null;
+  for (const line of lines) {
+    const questionMatch = line.match(/^(?:question\s*)?(\d{1,4})[.)]\s*(.+)$/i);
+    const optionMatch = line.match(/^(?:[([{]\s*)?([A-D])(?:\s*[\])}.:-]|\s{2,})\s*(.+)$/i);
+    if (questionMatch) {
+      if (current && current.options.length >= 2) questions.push(current);
+      current = {
+        question_text: questionMatch[2].trim(),
+        marks: 1,
+        explanation: '',
+        options: [],
+      };
+      currentOption = null;
+    } else if (current && optionMatch) {
+      currentOption = {
+        option_text: optionMatch[2].trim(),
+        is_correct: false,
+      };
+      current.options.push(currentOption);
+    } else if (current && currentOption) {
+      currentOption.option_text = `${currentOption.option_text} ${line}`.trim();
+    } else if (current) {
+      current.question_text = `${current.question_text} ${line}`.trim();
+    }
+  }
+  if (current && current.options.length >= 2) questions.push(current);
+  return questions;
+}
+
 async function importQuestions({ text, file }) {
   const source = await extractText({ text, file });
-  if (!source) {
-    const message = file?.mimetype?.includes('pdf')
-      ? 'This PDF contains no selectable text. It may be scanned/image-only; upload a text-based PDF or paste the extracted text.'
-      : 'No readable text found.';
+  const isPdf = Boolean(file?.buffer && (
+    (file.mimetype || '').toLowerCase().includes('pdf') ||
+    /\.pdf$/i.test(file.originalname || '')
+  ));
+  if (!source && !isPdf) {
+    const message = 'No readable text found.';
     throw Object.assign(new Error(message), { status: 422 });
   }
 
@@ -195,7 +252,7 @@ async function importQuestions({ text, file }) {
   }
 
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const chunks = splitSource(source);
+  const chunks = splitSource(source || '[The PDF has no selectable text. Inspect the attached PDF pages visually.]');
   const answerKeyMatch = source.match(/(?:answer\s*key|answers?|correct\s*answers?|solutions?)\s*[:\-]([\s\S]{0,16000})/i);
   const sharedAnswerKey = answerKeyMatch ? answerKeyMatch[1].trim() : '';
   const extracted = [];
@@ -207,29 +264,28 @@ async function importQuestions({ text, file }) {
       model,
       chunkNumber: index + 1,
       totalChunks: chunks.length,
+      file,
     }));
   }
 
-  const questions = deduplicateQuestions(extracted);
+  const questions = deduplicateQuestions(extracted.length ? extracted : parsePlainTextQuestions(source));
   if (!questions.length) {
     throw Object.assign(new Error(
-      'No multiple-choice questions were detected. Confirm the PDF has selectable text and uses visible question/options (for example, 1. Question, A. Option, B. Option).',
+      isPdf
+        ? 'The PDF was received, but AI could not identify its questions. This usually means the deployed backend is using an old build or the PDF is image-only. Restart/redeploy the backend and try again; if it still fails, paste one page of the PDF text here to verify the format.'
+        : 'No multiple-choice questions were detected. Use numbered questions with visible options such as A. Option, B. Option, C. Option, D. Option.',
     ), { status: 422 });
   }
-  const incomplete = questions.findIndex((question) => (
+  const incomplete_count = questions.filter((question) => (
     question.options.filter((option) => option.is_correct).length !== 1 ||
     !question.explanation.trim()
-  ));
-  if (incomplete >= 0) {
-    throw Object.assign(new Error(
-      `Question ${incomplete + 1} has no verified correct answer and complete explanation. Include the official answer key in the pasted text, then try again.`,
-    ), { status: 422 });
-  }
+  )).length;
   return {
     questions,
     source_length: source.length,
     detected: questions.length,
     chunks_processed: chunks.length,
+    incomplete_count,
   };
 }
 
