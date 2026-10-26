@@ -208,12 +208,13 @@ function parsePlainTextQuestions(source) {
   let current = null;
   let currentOption = null;
   for (const line of lines) {
-    const questionMatch = line.match(/^(?:question\s*)?(\d{1,4})[.)]\s*(.+)$/i);
+    const questionMatch = line.match(/^(?:question\s*)?(\d{1,4})[.)]\s*(.+)$/i)
+      || line.match(/^Q\s*(\d{1,4})(?:\s+.+)?$/i);
     const optionMatch = line.match(/^(?:[([{]\s*)?([A-D])(?:\s*[\])}.:-]|\s{2,})\s*(.+)$/i);
     if (questionMatch) {
       if (current && current.options.length >= 2) questions.push(current);
       current = {
-        question_text: questionMatch[2].trim(),
+        question_text: questionMatch[2] ? questionMatch[2].trim() : '',
         marks: 1,
         explanation: '',
         options: [],
