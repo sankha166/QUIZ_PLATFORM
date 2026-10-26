@@ -7,12 +7,16 @@ import { getErrorMessage } from '../../utils/helpers';
 export default function ForgotPassword() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const [sent, setSent] = useState(false);
+  const [resetLink, setResetLink] = useState('');
   const [error, setError] = useState('');
 
   const onSubmit = async (data) => {
     setError('');
     try {
-      await forgotPassword(data);
+      const response = await forgotPassword(data);
+      if (response.data?.token) {
+        setResetLink(`${window.location.origin}/reset-password?token=${encodeURIComponent(response.data.token)}`);
+      }
       setSent(true);
     } catch (err) {
       setError(getErrorMessage(err));
@@ -32,7 +36,13 @@ export default function ForgotPassword() {
           <div className="text-center">
             <div className="text-5xl mb-4">📧</div>
             <p className="text-gray-700 mb-6">If that email exists, a reset link has been sent. Check your inbox.</p>
-            <Link to="/login" className="btn-primary px-6">Back to Login</Link>
+          {resetLink && (
+            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-900">
+              <p className="font-semibold">Development reset link</p>
+              <a className="mt-1 block break-all text-indigo-700 underline" href={resetLink}>{resetLink}</a>
+            </div>
+          )}
+          <Link to="/login" className="btn-primary px-6">Back to Login</Link>
           </div>
         ) : (
           <>

@@ -47,6 +47,7 @@ export default function ResetPassword() {
             <input
               className="input"
               type="password"
+              autoComplete="new-password"
               placeholder="Min. 8 characters"
               {...register('password', { required: true, minLength: { value: 8, message: 'Minimum 8 characters' } })}
             />
@@ -57,6 +58,7 @@ export default function ResetPassword() {
             <input
               className="input"
               type="password"
+              autoComplete="new-password"
               {...register('confirm', { validate: (v) => v === password || 'Passwords do not match' })}
             />
             {errors.confirm && <p className="text-red-500 text-xs mt-1">{errors.confirm.message}</p>}

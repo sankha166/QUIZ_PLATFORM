@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { query } = require('../config/db');
 const { generateToken } = require('../utils/jwt');
 
@@ -70,10 +71,36 @@ const forgotPassword = async ({ email }) => {
     [user.id, token, expiresAt]
   );
 
-  // In production, send email. For now, log the token.
-  console.log(`Password reset token for ${email}: ${token}`);
+  const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const hasSmtp = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
 
-  return { message: 'If that email exists, a reset link has been sent.', token };
+  if (hasSmtp) {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: user.email,
+      subject: 'Reset your Quizora password',
+      text: `Use this link to reset your Quizora password. It expires in one hour:\n\n${resetUrl}`,
+      html: `<p>Use the link below to reset your Quizora password. It expires in one hour.</p><p><a href="${resetUrl}">Reset password</a></p>`,
+    });
+  } else if (process.env.NODE_ENV !== 'production') {
+    console.log(`Password reset token for ${email}: ${token}`);
+  } else {
+    const err = new Error('Password reset email is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS, and FRONTEND_URL.');
+    err.status = 503;
+    throw err;
+  }
+
+  return {
+    message: 'If that email exists, a reset link has been sent.',
+    ...(process.env.NODE_ENV !== 'production' && !hasSmtp ? { token } : {}),
+  };
 };
 
 const resetPassword = async ({ token, password }) => {

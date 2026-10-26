@@ -91,9 +91,38 @@ export default function QuizForm() {
     },
   });
   const categoryId = watch("category_id");
+  const thumbnailUrl = watch("thumbnail_url");
   const isLive = watch("is_live_quiz");
   const allDomains = watch("live_all_domains");
   const sameQuestionTime = watch("live_same_question_time");
+
+  const setThumbnailFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file for the thumbnail.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError("Thumbnail images must be smaller than 4 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setError("");
+      setValue("thumbnail_url", String(reader.result), { shouldDirty: true });
+    };
+    reader.onerror = () => setError("Unable to read the thumbnail image.");
+    reader.readAsDataURL(file);
+  };
+
+  const pasteThumbnail = (event) => {
+    const item = [...(event.clipboardData?.items || [])]
+      .find((entry) => entry.type.startsWith("image/"));
+    if (item) {
+      event.preventDefault();
+      setThumbnailFile(item.getAsFile());
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -609,12 +638,33 @@ export default function QuizForm() {
               </>
             )}
             <div>
-              <label className="label">Thumbnail URL</label>
-              <input
-                className="input"
-                type="url"
-                {...register("thumbnail_url")}
-              />
+              <label className="label">Thumbnail</label>
+              <div onPaste={pasteThumbnail}>
+                <input
+                  className="input"
+                  type="url"
+                  placeholder="Paste an image URL or paste an image here"
+                  {...register("thumbnail_url")}
+                />
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => setThumbnailFile(event.target.files?.[0])}
+                    className="w-full text-sm"
+                  />
+                  <span className="text-xs text-slate-500">
+                    JPG, PNG, GIF or WEBP up to 4 MB
+                  </span>
+                </div>
+              </div>
+              {thumbnailUrl && (
+                <img
+                  src={thumbnailUrl}
+                  alt="Quiz thumbnail preview"
+                  className="mt-3 h-32 w-full rounded-xl border object-cover sm:h-40"
+                />
+              )}
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <Link

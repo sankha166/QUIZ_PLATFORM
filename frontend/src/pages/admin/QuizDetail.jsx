@@ -93,8 +93,8 @@ function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4">
-      <div className="w-full max-w-2xl rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-3 sm:p-6">
+      <div className="my-auto max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-xl font-semibold">

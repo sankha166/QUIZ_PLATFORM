@@ -8,7 +8,9 @@ import LoadingScreen from '../../components/common/LoadingScreen';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 export default function Login() {
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    defaultValues: { email: localStorage.getItem('rememberedEmail') || '' },
+  });
   const { login } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
@@ -20,6 +22,8 @@ export default function Login() {
     setAuthenticating(true);
     try {
       const res = await loginApi(data);
+      if (data.rememberEmail) localStorage.setItem('rememberedEmail', data.email);
+      else localStorage.removeItem('rememberedEmail');
       login(res.data.token, res.data.user);
       if (res.data.user.role === 'ADMIN') navigate('/admin/dashboard');
       else navigate('/student/dashboard');
@@ -132,6 +136,7 @@ export default function Login() {
                 <input
                   className="input pl-12"
                   type="email"
+                  autoComplete="username"
                   placeholder="you@example.com"
                   {...register('email', { required: 'Email is required' })}
                 />
@@ -148,6 +153,7 @@ export default function Login() {
                 <input
                   className="input pl-12 pr-12"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   {...register('password', { required: 'Password is required' })}
                 />
@@ -166,7 +172,11 @@ export default function Login() {
               {errors.password && <p className="text-red-500 text-xs mt-1.5">{errors.password.message}</p>}
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" className="rounded border-slate-300 text-indigo-600" {...register('rememberEmail')} />
+                Remember email
+              </label>
               <Link to="/forgot-password" className="text-sm text-brand-600 font-medium hover:text-brand-700 transition-colors">
                 Forgot password?
               </Link>
