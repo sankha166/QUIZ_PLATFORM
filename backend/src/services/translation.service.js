@@ -18,7 +18,8 @@ const translate = async (texts) => {
     throw Object.assign(new Error('Automatic Hindi/Bengali translation requires GEMINI_API_KEY or GOOGLE_API_KEY.'), { status: 503 });
   }
   const prompt = [
-    'Translate each value into Hindi and Bengali. Preserve code, numbers, punctuation, HTML, and mathematical notation exactly.',
+    'Translate each value into natural Hindi and Bengali, not English. Preserve code, numbers, punctuation, HTML, chemical formulas, and mathematical notation exactly, but translate all surrounding natural-language text.',
+    'Do not copy an English sentence unchanged. Bengali output must use Bengali script where natural language exists; Hindi output must use Devanagari script where natural language exists.',
     'Return JSON only in this shape: {"hi":{"key":"translation"},"bn":{"key":"translation"}}.',
     JSON.stringify(Object.fromEntries(missing)),
   ].join('\n');
@@ -46,7 +47,7 @@ const translate = async (texts) => {
     language,
     Object.fromEntries(missing.map(([name, original]) => [
       name,
-      String(parsed?.[language]?.[name] || '').trim() || original,
+      String(parsed?.[language]?.[name] || '').trim(),
     ])),
   ]));
 };
@@ -60,8 +61,8 @@ const fillTranslations = async (source, current = {}) => {
   const generated = await translate(missing);
   return {
     ...translations,
-    hi: { ...(translations.hi || {}), ...(generated.hi || {}) },
-    bn: { ...(translations.bn || {}), ...(generated.bn || {}) },
+    hi: { ...(translations.hi || {}), ...Object.fromEntries(Object.entries(generated.hi || {}).map(([name, value]) => [name, value || source[name]])) },
+    bn: { ...(translations.bn || {}), ...Object.fromEntries(Object.entries(generated.bn || {}).map(([name, value]) => [name, value || source[name]])) },
   };
 };
 

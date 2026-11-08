@@ -94,6 +94,8 @@ const ensureQuizTranslations = async (quizId) => {
          AND (
            COALESCE(q.title_translations->>'hi','')=''
            OR COALESCE(q.title_translations->>'bn','')=''
+           OR q.title_translations->>'hi'=q.title
+           OR q.title_translations->>'bn'=q.title
            OR EXISTS (
              SELECT 1
              FROM questions question
@@ -101,6 +103,8 @@ const ensureQuizTranslations = async (quizId) => {
                AND (
                  COALESCE(question.question_text_translations->>'hi','')=''
                  OR COALESCE(question.question_text_translations->>'bn','')=''
+                 OR question.question_text_translations->>'hi'=question.question_text
+                 OR question.question_text_translations->>'bn'=question.question_text
                  OR EXISTS (
                    SELECT 1
                    FROM options option
@@ -108,6 +112,8 @@ const ensureQuizTranslations = async (quizId) => {
                      AND (
                        COALESCE(option.option_text_translations->>'hi','')=''
                        OR COALESCE(option.option_text_translations->>'bn','')=''
+                       OR option.option_text_translations->>'hi'=option.option_text
+                       OR option.option_text_translations->>'bn'=option.option_text
                      )
                  )
                )
@@ -116,7 +122,28 @@ const ensureQuizTranslations = async (quizId) => {
      ) missing`,
     [quizId],
   );
-  if (missing.rows[0]?.missing) await translateQuiz(quizId, { force: true });
+  if (missing.rows[0]?.missing) {
+    const result = await translateQuiz(quizId, { force: true });
+    if (result.status === 'processing') {
+      const deadline = Date.now() + 120000;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const status = await query(
+          'SELECT translation_status, translation_error FROM quizzes WHERE id=$1',
+          [quizId],
+        );
+        const current = status.rows[0];
+        if (current?.translation_status === 'completed') return;
+        if (current?.translation_status === 'failed') {
+          throw Object.assign(new Error(current.translation_error || 'Quiz translation failed.'), { status: 503 });
+        }
+      }
+      throw Object.assign(new Error('Quiz translation is still processing. Please retry shortly.'), { status: 503 });
+    }
+    if (result.status === 'failed') {
+      throw Object.assign(new Error('Quiz translation failed. Please retry shortly.'), { status: 503 });
+    }
+  }
 };
 
 const translateQuiz = async (quizId, { force = false } = {}) => {
@@ -148,44 +175,72 @@ const translateQuiz = async (quizId, { force = false } = {}) => {
     [quizId],
   );
   const quiz = quizResult.rows[0];
-  const source = {};
-  if (quiz?.title) source.quiz_title = quiz.title;
-  if (quiz?.description) source.quiz_description = quiz.description;
-  questions.forEach((question) => {
-    source[`q_${question.id}`] = question.question_text;
-    if (question.explanation) source[`e_${question.id}`] = question.explanation;
-    question.options.forEach((option) => { source[`o_${option.id}`] = option.option_text; });
-  });
   try {
-    if (!canTranslate() || !Object.keys(source).length) {
+    if (!canTranslate() || (!quiz && !questions.length)) {
       await query(`UPDATE quizzes SET translation_status='failed', translation_error=$2 WHERE id=$1`, [quizId, 'Translation provider is not configured or the quiz has no translatable content.']);
       return { translated: 0, status: 'failed' };
     }
-    const generated = await translate(source);
+    const translateRequired = async (source) => {
+      const names = Object.keys(source);
+      if (!names.length) return { hi: {}, bn: {} };
+      let generated;
+      let lastError;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          generated = await translate(source);
+          const missing = ['hi', 'bn'].flatMap((language) =>
+            names.filter((name) => {
+              const original = String(source[name] || '').trim();
+              const value = String(generated?.[language]?.[name] || '').trim();
+              return !value || (original.length > 20 && value === original);
+            }),
+          );
+          if (!missing.length) return generated;
+          lastError = new Error(`Translation service returned incomplete ${missing.length}-field output.`);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('Translation service returned incomplete output.');
+    };
+    const metadataSource = {};
+    if (quiz?.title) metadataSource.quiz_title = quiz.title;
+    if (quiz?.description) metadataSource.quiz_description = quiz.description;
+    const metadata = await translateRequired(metadataSource);
     if (quiz) {
       await query(
         'UPDATE quizzes SET title_translations=$1::jsonb, description_translations=$2::jsonb WHERE id=$3',
         [
           JSON.stringify({
             en: quiz.title || '',
-            hi: generated.hi.quiz_title || quiz.title || '',
-            bn: generated.bn.quiz_title || quiz.title || '',
+            hi: metadata.hi.quiz_title || '',
+            bn: metadata.bn.quiz_title || '',
           }),
           JSON.stringify({
             en: quiz.description || '',
-            hi: generated.hi.quiz_description || quiz.description || '',
-            bn: generated.bn.quiz_description || quiz.description || '',
+            hi: metadata.hi.quiz_description || '',
+            bn: metadata.bn.quiz_description || '',
           }),
           quizId,
         ],
       );
     }
-    for (const question of questions) {
-      const questionTranslations = { en: question.question_text, hi: generated.hi[`q_${question.id}`], bn: generated.bn[`q_${question.id}`] };
-      const explanationTranslations = { en: question.explanation || '', hi: generated.hi[`e_${question.id}`] || '', bn: generated.bn[`e_${question.id}`] || '' };
-      await query('UPDATE questions SET question_text_translations=$1::jsonb, explanation_translations=$2::jsonb WHERE id=$3', [JSON.stringify(questionTranslations), JSON.stringify(explanationTranslations), question.id]);
-      for (const option of question.options) {
-        await query('UPDATE options SET option_text_translations=$1::jsonb WHERE id=$2', [JSON.stringify({ en: option.option_text, hi: generated.hi[`o_${option.id}`], bn: generated.bn[`o_${option.id}`] }), option.id]);
+    for (let index = 0; index < questions.length; index += 10) {
+      const batch = questions.slice(index, index + 10);
+      const source = {};
+      batch.forEach((question) => {
+        source[`q_${question.id}`] = question.question_text;
+        if (question.explanation) source[`e_${question.id}`] = question.explanation;
+        question.options.forEach((option) => { source[`o_${option.id}`] = option.option_text; });
+      });
+      const generated = await translateRequired(source);
+      for (const question of batch) {
+        const questionTranslations = { en: question.question_text, hi: generated.hi[`q_${question.id}`], bn: generated.bn[`q_${question.id}`] };
+        const explanationTranslations = { en: question.explanation || '', hi: generated.hi[`e_${question.id}`] || '', bn: generated.bn[`e_${question.id}`] || '' };
+        await query('UPDATE questions SET question_text_translations=$1::jsonb, explanation_translations=$2::jsonb WHERE id=$3', [JSON.stringify(questionTranslations), JSON.stringify(explanationTranslations), question.id]);
+        for (const option of question.options) {
+          await query('UPDATE options SET option_text_translations=$1::jsonb WHERE id=$2', [JSON.stringify({ en: option.option_text, hi: generated.hi[`o_${option.id}`], bn: generated.bn[`o_${option.id}`] }), option.id]);
+        }
       }
     }
     await query(`UPDATE quizzes SET translation_status='completed', translation_completed_at=NOW(), translation_error=NULL WHERE id=$1`, [quizId]);

@@ -32,9 +32,7 @@ const getAll = async (req, res, next) => {
     );
     if (quizzesNeedingTranslations.length) {
       await Promise.all(quizzesNeedingTranslations.map((quiz) =>
-        questionService.ensureQuizTranslations(quiz.id).catch((error) => {
-          console.error(`Unable to repair quiz translations ${quiz.id}:`, error.message);
-        }),
+        questionService.ensureQuizTranslations(quiz.id),
       ));
       quizzes = await quizListingService.getAll({ role, search, category, difficulty, sort, status, domain_id });
     }
