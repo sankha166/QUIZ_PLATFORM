@@ -16,6 +16,7 @@ import ConfirmModal from "../../components/common/ConfirmModal";
 import Badge from "../../components/common/Badge";
 import { statusColor, getErrorMessage } from "../../utils/helpers";
 import { getQuestionReports, updateQuestionReport } from "../../api/admin.api";
+import { localizedValue, useLanguage } from "../../context/LanguageContext";
 
 function QuestionFormModal({ question, quizId, isLive, defaultMarks, onSave, onClose }) {
   const [text, setText] = useState(question?.question_text || "");
@@ -482,6 +483,7 @@ function AiImportModal({ quizId, isLive, defaultMarks, onImported, onClose }) {
 export default function QuizDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -563,7 +565,7 @@ export default function QuizDetail() {
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <h2 className="break-words text-2xl font-bold sm:text-3xl">
-                {quiz?.title}
+                {localizedValue(quiz, "title", language)}
               </h2>
               {isLive && (
                 <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
@@ -690,7 +692,7 @@ export default function QuizDetail() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap gap-2">
-                        <p className="font-medium">{q.question_text}</p>
+                        <p className="font-medium">{localizedValue(q, "question_text", language)}</p>
                         {isLive && (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
                             ⏱ {q.time_limit_seconds || 30}s
@@ -715,14 +717,14 @@ export default function QuizDetail() {
                             key={o.id}
                             className={`rounded-xl border p-2 text-sm ${o.is_correct ? "border-emerald-200 bg-emerald-50 text-emerald-700" : ""}`}
                           >
-                            <div>{o.is_correct ? "✓ " : ""}{o.option_text}</div>
+                            <div>{o.is_correct ? "✓ " : ""}{localizedValue(o, "option_text", language)}</div>
                             {o.image_url && <img src={o.image_url} alt="" className="mt-2 max-h-24 rounded-lg object-contain" />}
                           </div>
                         ))}
                       </div>
                       {q.explanation && (
                         <p className="mt-3 text-sm text-slate-500">
-                          <b>Explanation:</b> {q.explanation}
+                          <b>Explanation:</b> {localizedValue(q, "explanation", language)}
                         </p>
                       )}
                       {q.explanation_image_url && (

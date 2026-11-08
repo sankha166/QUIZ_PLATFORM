@@ -3,6 +3,7 @@ const questionService = require('../services/question.service');
 const getByQuiz = async (req, res, next) => {
   try {
     const quizId = req.params.quizId || req.params.id;
+    await questionService.ensureQuizTranslations(quizId);
     const includeCorrect = req.user.role === 'ADMIN';
     const data = await questionService.getByQuiz(quizId, includeCorrect);
     res.json({ success: true, questions: data });

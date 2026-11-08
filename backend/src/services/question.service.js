@@ -84,6 +84,41 @@ const update = async (id, { question_text, question_text_translations, marks, ex
 
 const remove = async id => { const r = await query('DELETE FROM questions WHERE id=$1 RETURNING id', [id]); if (!r.rows.length) { const e = new Error('Question not found'); e.status = 404; throw e; } return { message: 'Question deleted successfully' }; };
 
+const ensureQuizTranslations = async (quizId) => {
+  if (!canTranslate()) return;
+  const missing = await query(
+    `SELECT EXISTS(
+       SELECT 1
+       FROM quizzes q
+       WHERE q.id=$1
+         AND (
+           COALESCE(q.title_translations->>'hi','')=''
+           OR COALESCE(q.title_translations->>'bn','')=''
+           OR EXISTS (
+             SELECT 1
+             FROM questions question
+             WHERE question.quiz_id=q.id
+               AND (
+                 COALESCE(question.question_text_translations->>'hi','')=''
+                 OR COALESCE(question.question_text_translations->>'bn','')=''
+                 OR EXISTS (
+                   SELECT 1
+                   FROM options option
+                   WHERE option.question_id=question.id
+                     AND (
+                       COALESCE(option.option_text_translations->>'hi','')=''
+                       OR COALESCE(option.option_text_translations->>'bn','')=''
+                     )
+                 )
+               )
+           )
+         )
+     ) missing`,
+    [quizId],
+  );
+  if (missing.rows[0]?.missing) await translateQuiz(quizId, { force: true });
+};
+
 const translateQuiz = async (quizId, { force = false } = {}) => {
   const claim = await query(
     `UPDATE quizzes
@@ -92,7 +127,13 @@ const translateQuiz = async (quizId, { force = false } = {}) => {
      WHERE id=$1
        AND (
          translation_status='pending'
-         OR ($2::boolean AND translation_status='failed')
+         OR (
+           $2::boolean
+           AND (
+             COALESCE(translation_status, '') <> 'processing'
+             OR translation_started_at < NOW() - INTERVAL '10 minutes'
+           )
+         )
        )
      RETURNING id`,
     [quizId, force],
@@ -102,7 +143,14 @@ const translateQuiz = async (quizId, { force = false } = {}) => {
     return { translated: 0, status: status.rows[0]?.translation_status || 'missing' };
   }
   const questions = await getByQuiz(quizId, false);
+  const quizResult = await query(
+    'SELECT title, description, title_translations, description_translations FROM quizzes WHERE id=$1',
+    [quizId],
+  );
+  const quiz = quizResult.rows[0];
   const source = {};
+  if (quiz?.title) source.quiz_title = quiz.title;
+  if (quiz?.description) source.quiz_description = quiz.description;
   questions.forEach((question) => {
     source[`q_${question.id}`] = question.question_text;
     if (question.explanation) source[`e_${question.id}`] = question.explanation;
@@ -114,6 +162,24 @@ const translateQuiz = async (quizId, { force = false } = {}) => {
       return { translated: 0, status: 'failed' };
     }
     const generated = await translate(source);
+    if (quiz) {
+      await query(
+        'UPDATE quizzes SET title_translations=$1::jsonb, description_translations=$2::jsonb WHERE id=$3',
+        [
+          JSON.stringify({
+            en: quiz.title || '',
+            hi: generated.hi.quiz_title || quiz.title || '',
+            bn: generated.bn.quiz_title || quiz.title || '',
+          }),
+          JSON.stringify({
+            en: quiz.description || '',
+            hi: generated.hi.quiz_description || quiz.description || '',
+            bn: generated.bn.quiz_description || quiz.description || '',
+          }),
+          quizId,
+        ],
+      );
+    }
     for (const question of questions) {
       const questionTranslations = { en: question.question_text, hi: generated.hi[`q_${question.id}`], bn: generated.bn[`q_${question.id}`] };
       const explanationTranslations = { en: question.explanation || '', hi: generated.hi[`e_${question.id}`] || '', bn: generated.bn[`e_${question.id}`] || '' };
@@ -130,4 +196,4 @@ const translateQuiz = async (quizId, { force = false } = {}) => {
   }
 };
 
-module.exports = { getByQuiz, add, update, remove, translateQuiz };
+module.exports = { getByQuiz, add, update, remove, ensureQuizTranslations, translateQuiz };

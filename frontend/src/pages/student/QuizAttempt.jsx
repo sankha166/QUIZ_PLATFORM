@@ -392,7 +392,7 @@ export default function QuizAttempt() {
                       name={`q_${question.id}`}
                       value={opt.id}
                       checked={answers[question.id] == opt.id}
-                      onChange={() => selectAnswer(opt.id)}
+                      onClick={() => selectAnswer(opt.id)}
                       disabled={attemptData.mode === "short" && Boolean(shortFeedback)}
                       className="sr-only"
                     />

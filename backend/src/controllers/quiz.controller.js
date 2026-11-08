@@ -21,9 +21,26 @@ const getAll = async (req, res, next) => {
       domain_id = await getStudentPreferredDomain(req.user.id);
     }
 
+    let quizzes = await quizListingService.getAll({ role, search, category, difficulty, sort, status, domain_id });
+    const quizzesNeedingTranslations = quizzes.filter(
+      (quiz) => quiz.title && (
+        !quiz.title_translations?.hi
+        || !quiz.title_translations?.bn
+        || quiz.translation_status === 'pending'
+        || quiz.translation_status === 'failed'
+      ),
+    );
+    if (quizzesNeedingTranslations.length) {
+      await Promise.all(quizzesNeedingTranslations.map((quiz) =>
+        questionService.ensureQuizTranslations(quiz.id).catch((error) => {
+          console.error(`Unable to repair quiz translations ${quiz.id}:`, error.message);
+        }),
+      ));
+      quizzes = await quizListingService.getAll({ role, search, category, difficulty, sort, status, domain_id });
+    }
     res.json({
       success: true,
-      quizzes: await quizListingService.getAll({ role, search, category, difficulty, sort, status, domain_id }),
+      quizzes,
     });
   } catch (e) {
     next(e);
@@ -32,6 +49,7 @@ const getAll = async (req, res, next) => {
 
 const getById = async (req, res, next) => {
   try {
+    await questionService.ensureQuizTranslations(req.params.id);
     const quiz = await quizService.getById(req.params.id, req.user.role);
     if (req.user?.role === 'STUDENT') {
       const preferredDomain = await getStudentPreferredDomain(req.user.id);

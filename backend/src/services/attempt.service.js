@@ -33,6 +33,7 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
     throw error;
   }
   const quiz = result.rows[0];
+  await questionService.ensureQuizTranslations(qid);
   const selectedMode = mode === 'short' ? 'short' : 'long';
   const questionCountResult = await query('SELECT COUNT(*)::int question_count FROM questions WHERE quiz_id=$1', [qid]);
   const questionCount = questionCountResult.rows[0].question_count;
@@ -52,6 +53,24 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
     [qid, uid],
   );
   if (inProgress.rows.length) {
+    const existing = inProgress.rows[0];
+    const modeChanged = existing.mode !== selectedMode
+      || (selectedMode === 'short' && Number(existing.per_question_seconds) !== questionSeconds);
+    if (modeChanged) {
+      const totalSeconds = selectedMode === 'short'
+        ? questionSeconds * Math.max(1, questionCount)
+        : Number(quiz.duration) * 60;
+      const expiry = new Date(Date.now() + totalSeconds * 1000);
+      await query(
+        `UPDATE attempts
+         SET mode=$2, per_question_seconds=$3, expiry_time=$4
+         WHERE id=$1`,
+        [existing.id, selectedMode, questionSeconds, expiry],
+      );
+      existing.mode = selectedMode;
+      existing.per_question_seconds = questionSeconds;
+      existing.expiry_time = expiry;
+    }
     const optionStats = await query(
       `SELECT o.question_id,o.id option_id,COUNT(past.id)::int selections,
               COALESCE(SUM(COUNT(past.id)) OVER (PARTITION BY o.question_id),0)::int total_selections
@@ -63,13 +82,13 @@ const start = async (qid, uid, { mode = 'long', perQuestionSeconds } = {}) => {
       [qid],
     );
     return {
-      attemptId: inProgress.rows[0].id,
-      startedAt: inProgress.rows[0].started_at,
+      attemptId: existing.id,
+      startedAt: existing.started_at,
       questions: await questionService.getByQuiz(qid, false),
-      expiryTime: inProgress.rows[0].expiry_time,
+      expiryTime: existing.expiry_time,
       quiz,
-      mode: inProgress.rows[0].mode || 'long',
-      perQuestionSeconds: inProgress.rows[0].per_question_seconds || null,
+      mode: existing.mode === 'short' ? 'short' : 'long',
+      perQuestionSeconds: existing.mode === 'short' ? existing.per_question_seconds : null,
       optionStats: optionStats.rows,
     };
   }
@@ -158,6 +177,16 @@ const submit = async (qid, uid, { attemptId, answers }) => {
 
 const getMyAttempts = async (uid) => {
   const domainId = await preferred(uid);
+  const quizIds = await query(
+    `SELECT DISTINCT quiz_id
+     FROM attempts
+    WHERE user_id=$1 AND status!='in_progress'
+      AND quiz_id IN (SELECT id FROM quizzes WHERE COALESCE(is_live_quiz,FALSE)=FALSE)`,
+    [uid],
+  );
+  for (const { quiz_id: quizId } of quizIds.rows) {
+    await questionService.ensureQuizTranslations(quizId);
+  }
   const result = await query(
     `SELECT a.*,q.title quiz_title,q.title_translations,q.description_translations,q.duration,q.passing_score,q.negative_marking_percent,q.is_live_quiz,
             (SELECT COALESCE(SUM(marks),0) FROM questions tq WHERE tq.quiz_id=q.id) total_marks,
@@ -194,6 +223,12 @@ const getAttemptById = async (aid, uid) => {
   }
 
   const attempt = attemptResult.rows[0];
+  await questionService.ensureQuizTranslations(attempt.quiz_id);
+  const translatedQuiz = await query(
+    'SELECT title_translations, description_translations FROM quizzes WHERE id=$1',
+    [attempt.quiz_id],
+  );
+  Object.assign(attempt, translatedQuiz.rows[0] || {});
   const answerResult = await query(
     `SELECT q.id question_id,ans.id answer_id,ans.selected_option_id,ans.is_correct,
             COALESCE(ans.time_taken,0) time_taken,COALESCE(ans.marks_awarded,0) marks_awarded,q.question_text,q.question_text_translations,q.explanation,q.explanation_translations,q.question_image_url,q.explanation_image_url,q.marks,
